@@ -1,0 +1,52 @@
+🎯 WORKFLOW ACTIVATION ANALYSIS REPORT
+==================================================
+📊 Total Workflows Analyzed: 2057
+
+🚀 ACTIVATION RECOMMENDATIONS
+------------------------------
+✅ Recommended for Activation: 2054 (99.9%)
+⚠️  Needs Improvement: 3
+
+📈 QUALITY DISTRIBUTION
+-------------------------
+90-100%: 788 workflows (38.3%)
+80-89%: 1155 workflows (56.1%)
+70-79%: 111 workflows (5.4%)
+60-69%: 0 workflows (0.0%)
+below_60%: 3 workflows (0.1%)
+
+⭐ TOP ACTIVATION CANDIDATES
+------------------------------
+ 1. 0424_Hunter_Form_Send_Webhook.json (Score: 100.0)
+ 2. 0426_Hunter_Form_Send_Webhook.json (Score: 100.0)
+ 3. 1255_Webhook_Respondtowebhook_Automate_Webhook.json (Score: 100.0)
+ 4. 1477_Webhook_Slack_Update_Webhook.json (Score: 100.0)
+ 5. 1132_Webhook_Extractfromfile_Process_Webhook.json (Score: 100.0)
+ 6. 0295_Webhook_Dropcontact_Create_Webhook.json (Score: 100.0)
+ 7. 1415_Webhook_Respondtowebhook_Create_Webhook.json (Score: 100.0)
+ 8. 1417_Webhook_Respondtowebhook_Create_Webhook.json (Score: 100.0)
+ 9. 0410_Webhook_Filter_Update_Webhook.json (Score: 100.0)
+10. 0467_Webhook_Respondtowebhook_Send_Webhook.json (Score: 100.0)
+11. 2007_Webhook_Graphql_Automate_Webhook.json (Score: 100.0)
+12. 0499_Webhook_Respondtowebhook_Create_Webhook.json (Score: 100.0)
+13. 1410_Webhook_Discord_Automate_Webhook.json (Score: 100.0)
+14. 1525_Webhook_Telegram_Create_Webhook.json (Score: 100.0)
+15. 0813_Webhook_Respondtowebhook_Process_Webhook.json (Score: 100.0)
+16. 1416_Webhook_Respondtowebhook_Create_Webhook.json (Score: 100.0)
+17. 0270_Webhook_Discord_Automate_Webhook.json (Score: 100.0)
+18. 0683_Webhook_Telegram_Create_Webhook.json (Score: 100.0)
+19. 0414_Webhook_Filter_Create_Webhook.json (Score: 100.0)
+20. 0845_Webhook_Filter_Export_Webhook.json (Score: 100.0)
+
+🔧 COMMON ISSUES TO ADDRESS
+------------------------------
+• Missing or invalid connections: 694 workflows (33.7%)
+• Potential hardcoded credentials: 222 workflows (10.8%)
+• Too many nodes: 52: 19 workflows (0.9%)
+• Too many nodes: 65: 19 workflows (0.9%)
+• Too many nodes: 56: 18 workflows (0.9%)
+• Too many nodes: 51: 17 workflows (0.8%)
+• Too many nodes: 57: 17 workflows (0.8%)
+• Too many nodes: 86: 14 workflows (0.7%)
+• Too many nodes: 60: 14 workflows (0.7%)
+• Too many nodes: 58: 13 workflows (0.6%)

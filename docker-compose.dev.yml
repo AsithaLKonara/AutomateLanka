@@ -1,0 +1,265 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: autolanka-postgres-dev
+    environment:
+      POSTGRES_DB: autolanka_dev
+      POSTGRES_USER: autolanka
+      POSTGRES_PASSWORD: autolanka_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - autolanka-network
+
+  # Redis for Caching & Queues
+  redis:
+    image: redis:7-alpine
+    container_name: autolanka-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - autolanka-network
+
+  # MinIO for S3-compatible Storage
+  minio:
+    image: minio/minio:latest
+    container_name: autolanka-minio-dev
+    environment:
+      MINIO_ROOT_USER: autolanka
+      MINIO_ROOT_PASSWORD: autolanka_dev_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - autolanka-network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.dev
+    container_name: autolanka-backend-dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://autolanka:autolanka_dev_password@postgres:5432/autolanka_dev
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=autolanka
+      - S3_SECRET_KEY=autolanka_dev_password
+      - S3_BUCKET=autolanka-dev
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - autolanka-network
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile.dev
+    container_name: autolanka-frontend-dev
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - autolanka-network
+
+  # ML Service
+  ml-service:
+    build:
+      context: .
+      dockerfile: services/ml/Dockerfile.dev
+    container_name: autolanka-ml-dev
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=autolanka
+      - S3_SECRET_KEY=autolanka_dev_password
+      - S3_BUCKET=autolanka-dev
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/ml:/app
+      - ml_models:/app/models
+    depends_on:
+      - redis
+      - minio
+    networks:
+      - autolanka-network
+
+  # Worker for Background Jobs
+  worker:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.dev
+    container_name: autolanka-worker-dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://autolanka:autolanka_dev_password@postgres:5432/autolanka_dev
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=autolanka
+      - S3_SECRET_KEY=autolanka_dev_password
+      - S3_BUCKET=autolanka-dev
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WORKER_MODE=true
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - ml-service
+    networks:
+      - autolanka-network
+    command: ["npm", "run", "worker:dev"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  ml_models:
+
+networks:
+  autolanka-network:
+    driver: bridge
+      dockerfile: apps/backend/Dockerfile.dev
+    container_name: autolanka-backend-dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://autolanka:autolanka_dev_password@postgres:5432/autolanka_dev
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=autolanka
+      - S3_SECRET_KEY=autolanka_dev_password
+      - S3_BUCKET=autolanka-dev
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - autolanka-network
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile.dev
+    container_name: autolanka-frontend-dev
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - autolanka-network
+
+  # ML Service
+  ml-service:
+    build:
+      context: .
+      dockerfile: services/ml/Dockerfile.dev
+    container_name: autolanka-ml-dev
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=autolanka
+      - S3_SECRET_KEY=autolanka_dev_password
+      - S3_BUCKET=autolanka-dev
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/ml:/app
+      - ml_models:/app/models
+    depends_on:
+      - redis
+      - minio
+    networks:
+      - autolanka-network
+
+  # Worker for Background Jobs
+  worker:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.dev
+    container_name: autolanka-worker-dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://autolanka:autolanka_dev_password@postgres:5432/autolanka_dev
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=autolanka
+      - S3_SECRET_KEY=autolanka_dev_password
+      - S3_BUCKET=autolanka-dev
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WORKER_MODE=true
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - ml-service
+    networks:
+      - autolanka-network
+    command: ["npm", "run", "worker:dev"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  ml_models:
+
+networks:
+  autolanka-network:
+    driver: bridge

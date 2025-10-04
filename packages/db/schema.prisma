@@ -1,0 +1,797 @@
+// Autolanka SaaS Database Schema
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@autolanka/db/dist/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organizations UserOrganization[]
+  auditLogs     AuditLog[]
+  workflowTemplates WorkflowTemplate[]
+  workflowReviews WorkflowReview[]
+  workflowDownloads WorkflowDownload[]
+  workflowExecutions WorkflowExecution[]
+  communityPosts CommunityPost[]
+  communityComments CommunityComment[]
+  profile UserProfile?
+  integrations Integration[]
+  createdNotifications Notification[] @relation("NotificationCreator")
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users        UserOrganization[]
+  brands       Brand[]
+  media        Media[]
+  draftPosts   DraftPost[]
+  scheduledPosts ScheduledPost[]
+  auditLogs    AuditLog[]
+  subscriptions Subscription[]
+  integrations Integration[]
+  notifications Notification[]
+  socialAccounts SocialAccount[]
+  comments     Comment[]
+  competitors  Competitor[]
+  analytics    Analytics[]
+
+  @@map("organizations")
+}
+
+model UserOrganization {
+  id     String @id @default(cuid())
+  userId String
+  orgId  String
+
+  role UserRole @default(MEMBER)
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@map("user_organizations")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+  MEMBER
+}
+
+// Brand Management
+model Brand {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  brandVoice     String?
+  targetAudience String?
+  contentTypes   String[] // ["social", "blog", "video", "audio"]
+  goals          String[] // ["engagement", "sales", "awareness"]
+  settings       Json?
+  orgId          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  media         Media[]
+  draftPosts    DraftPost[]
+  scheduledPosts ScheduledPost[]
+
+  @@map("brands")
+}
+
+// Media Management
+model Media {
+  id            String      @id @default(cuid())
+  title         String
+  description   String?
+  filename      String
+  originalUrl   String
+  s3Key         String
+  s3Bucket      String
+  fileSize      Int
+  duration      Float?      // for video/audio
+  mimeType      String
+  status        MediaStatus @default(UPLOADED)
+  tags          String[]    // AI-generated tags
+  transcript    String?     // for audio/video
+  summary       String?     // AI-generated summary
+  hashtags      String[]    // AI-generated hashtags
+  thumbnailUrl  String?
+  metadata      Json?
+  orgId         String
+  brandId       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  brand         Brand?       @relation(fields: [brandId], references: [id])
+  microclips    Microclip[]
+  draftPosts    DraftPost[]
+
+  @@map("media")
+}
+
+enum MediaStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+// Microclip Generation
+model Microclip {
+  id          String   @id @default(cuid())
+  title       String
+  startTime   Float
+  endTime     Float
+  duration    Float
+  thumbnailUrl String?
+  s3Key       String
+  s3Bucket    String
+  status      MediaStatus @default(PROCESSING)
+  mediaId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  media       Media      @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  draftPosts  DraftPost[]
+
+  @@map("microclips")
+}
+
+// Content Creation
+model DraftPost {
+  id            String        @id @default(cuid())
+  title         String
+  content       String        // main content
+  captionVariants String[]    // 3 AI-generated variants
+  hashtagBundles String[]     // 2 hashtag bundles
+  thumbnailUrls  String[]     // 3 thumbnail options
+  status        DraftStatus   @default(DRAFT)
+  scheduledFor  DateTime?
+  publishedAt   DateTime?
+  externalId    String?       // IG/YT post ID
+  platform      Platform
+  orgId         String
+  brandId       String?
+  mediaId       String?
+  microclipId   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  org           Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  brand         Brand?          @relation(fields: [brandId], references: [id])
+  media         Media?          @relation(fields: [mediaId], references: [id])
+  microclip     Microclip?      @relation(fields: [microclipId], references: [id])
+  scheduledPost ScheduledPost?
+
+  @@map("draft_posts")
+}
+
+enum DraftStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum Platform {
+  INSTAGRAM
+  YOUTUBE
+  FACEBOOK
+  TWITTER
+  TIKTOK
+  LINKEDIN
+}
+
+// Scheduling
+model ScheduledPost {
+  id            String   @id @default(cuid())
+  scheduledFor  DateTime
+  status        ScheduleStatus @default(PENDING)
+  publishedAt   DateTime?
+  errorMessage  String?
+  draftPostId   String   @unique
+  orgId         String
+  brandId       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  draftPost     DraftPost @relation(fields: [draftPostId], references: [id], onDelete: Cascade)
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  brand         Brand?       @relation(fields: [brandId], references: [id])
+
+  @@map("scheduled_posts")
+}
+
+enum ScheduleStatus {
+  PENDING
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+// Social Media Integration
+model SocialAccount {
+  id            String   @id @default(cuid())
+  platform      Platform
+  accountId     String   // external platform account ID
+  accountName   String
+  accessToken   String   // encrypted
+  refreshToken  String?  // encrypted
+  tokenExpiry   DateTime?
+  isActive      Boolean  @default(true)
+  settings      Json?
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([platform, accountId, orgId])
+  @@map("social_accounts")
+}
+
+// Reputation Monitoring
+model Comment {
+  id            String   @id @default(cuid())
+  externalId    String   // platform comment ID
+  content       String
+  author        String
+  sentiment     Sentiment
+  isReplied     Boolean  @default(false)
+  replyContent  String?
+  platform      Platform
+  postId        String   // external post ID
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([externalId, platform])
+  @@map("comments")
+}
+
+enum Sentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+  SPAM
+}
+
+// Competitor Analysis
+model Competitor {
+  id            String   @id @default(cuid())
+  name          String
+  handle        String   // @username
+  platform      Platform
+  url           String
+  isActive      Boolean  @default(true)
+  settings      Json?
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  competitorPosts CompetitorPost[]
+
+  @@unique([handle, platform, orgId])
+  @@map("competitors")
+}
+
+model CompetitorPost {
+  id            String   @id @default(cuid())
+  externalId    String   // platform post ID
+  content       String
+  engagement    Json     // likes, comments, shares, etc.
+  postedAt      DateTime
+  analysis      Json?    // AI analysis results
+  competitorId  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  competitor    Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@unique([externalId, competitorId])
+  @@map("competitor_posts")
+}
+
+// Workflow Marketplace
+model WorkflowTemplate {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  category      String   // social_media, content_creation, analytics, automation
+  tags          String[]
+  content       Json     // Workflow definition
+  isPublic      Boolean  @default(false)
+  isFeatured    Boolean  @default(false)
+  price         Float    @default(0.0)
+  currency      String   @default("USD")
+  downloads     Int      @default(0)
+  rating        Float    @default(0.0)
+  reviewCount   Int      @default(0)
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, DRAFT
+  metadata      Json?
+  createdBy     String
+  orgId         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  reviews       WorkflowReview[]
+  downloadRecords WorkflowDownload[]
+  versions      WorkflowVersion[]
+  executions    WorkflowExecution[]
+  creator       User     @relation(fields: [createdBy], references: [id])
+
+  @@map("workflow_templates")
+}
+
+model WorkflowReview {
+  id           String   @id @default(cuid())
+  templateId   String
+  userId       String
+  rating       Int      // 1-5
+  comment      String?
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  template     WorkflowTemplate @relation(fields: [templateId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+
+  @@unique([templateId, userId])
+  @@map("workflow_reviews")
+}
+
+model WorkflowDownload {
+  id           String   @id @default(cuid())
+  templateId   String
+  userId       String
+  orgId        String?
+  downloadedAt DateTime @default(now())
+
+  // Relations
+  template     WorkflowTemplate @relation(fields: [templateId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+
+  @@map("workflow_downloads")
+}
+
+model WorkflowVersion {
+  id           String   @id @default(cuid())
+  templateId   String
+  version      String   // e.g., "1.0.0"
+  content      Json     // Workflow definition
+  changelog    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  template     WorkflowTemplate @relation(fields: [templateId], references: [id])
+
+  @@unique([templateId, version])
+  @@map("workflow_versions")
+}
+
+model WorkflowExecution {
+  id           String   @id @default(cuid())
+  templateId   String?
+  workflowId   String   // Custom workflow ID
+  name         String
+  content      Json     // Workflow definition
+  status       String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  startedAt    DateTime?
+  completedAt  DateTime?
+  error        String?
+  metadata     Json?
+  orgId        String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  template     WorkflowTemplate? @relation(fields: [templateId], references: [id])
+  creator      User              @relation(fields: [createdBy], references: [id])
+  steps        WorkflowStep[]
+
+  @@map("workflow_executions")
+}
+
+model WorkflowStep {
+  id           String   @id @default(cuid())
+  executionId  String
+  stepId       String
+  name         String
+  type         String   // trigger, action, condition
+  status       String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED, SKIPPED
+  input        Json?
+  output       Json?
+  error        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  execution    WorkflowExecution @relation(fields: [executionId], references: [id])
+
+  @@map("workflow_steps")
+}
+
+// Community Features
+model CommunityPost {
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  type         String   @default("discussion") // discussion, question, announcement, showcase
+  tags         String[]
+  isPinned     Boolean  @default(false)
+  isLocked     Boolean  @default(false)
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  replies      Int      @default(0)
+  status       String   @default("ACTIVE") // ACTIVE, ARCHIVED, DELETED
+  metadata     Json?
+  createdBy    String
+  orgId        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  author       User           @relation(fields: [createdBy], references: [id])
+  comments     CommunityComment[]
+
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id           String   @id @default(cuid())
+  postId       String
+  content      String
+  parentId     String?  // For nested comments
+  likes        Int      @default(0)
+  status       String   @default("ACTIVE") // ACTIVE, DELETED
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  post         CommunityPost @relation(fields: [postId], references: [id])
+  author       User          @relation(fields: [createdBy], references: [id])
+  parent       CommunityComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies      CommunityComment[] @relation("CommentReplies")
+
+  @@map("community_comments")
+}
+
+model UserProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  displayName  String?
+  bio          String?
+  avatar       String?
+  website      String?
+  location     String?
+  skills       String[]
+  portfolio    Json?    // Portfolio items
+  socialLinks  Json?    // Social media links
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user         User @relation(fields: [userId], references: [id])
+
+  @@map("user_profiles")
+}
+
+// Webhook Management
+model WebhookConfig {
+  id           String   @id @default(cuid())
+  name         String
+  url          String
+  method       String   @default("POST") // GET, POST, PUT, PATCH, DELETE
+  headers      Json?    // Custom headers
+  timeout      Int      @default(30000) // Timeout in milliseconds
+  retries      Int      @default(3)
+  retryDelay   Int      @default(1000) // Retry delay in seconds
+  enabled      Boolean  @default(true)
+  secret       String?  // Webhook secret for signature verification
+  events       String[] // Event types to trigger webhook
+  orgId        String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  webhookEvents WebhookEvent[]
+  deliveries   WebhookDelivery[]
+
+  @@map("webhook_configs")
+}
+
+model WebhookEvent {
+  id           String   @id @default(cuid())
+  webhookId    String
+  eventType    String
+  payload      Json
+  headers      Json?    // Custom headers
+  status       String   @default("pending") // pending, processing, delivered, failed
+  attempts     Int      @default(0)
+  maxAttempts  Int      @default(4)
+  nextRetryAt  DateTime?
+  deliveredAt  DateTime?
+  failedAt     DateTime?
+  error        String?
+  response     Json?    // Response data
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  webhook      WebhookConfig @relation(fields: [webhookId], references: [id])
+  deliveries   WebhookDelivery[]
+
+  @@map("webhook_events")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  webhookId    String
+  eventId      String
+  attempt      Int
+  status       String   // success, failed
+  statusCode   Int?
+  responseTime Int      // Response time in milliseconds
+  error        String?
+  response     Json?    // Response data
+  deliveredAt  DateTime @default(now())
+
+  // Relations
+  webhook      WebhookConfig @relation(fields: [webhookId], references: [id])
+  event        WebhookEvent  @relation(fields: [eventId], references: [id])
+
+  @@map("webhook_deliveries")
+}
+
+// Monitoring & Metrics
+model SystemMetric {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  cpuUsage     Float
+  memoryUsage  Float
+  diskUsage    Float
+  networkUsage Json?    // Network interface data
+  uptime       Int      // Uptime in seconds
+  metadata     Json?
+
+  @@map("system_metrics")
+}
+
+model ApplicationMetric {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  requestCount Int      @default(0)
+  successCount Int      @default(0)
+  errorCount   Int      @default(0)
+  avgResponseTime Float @default(0)
+  dbConnections Int     @default(0)
+  dbQueries    Int      @default(0)
+  cacheHitRate Float    @default(0)
+  workflowCount Int     @default(0)
+  userCount    Int      @default(0)
+  metadata     Json?
+
+  @@map("application_metrics")
+}
+
+model AlertRule {
+  id           String   @id @default(cuid())
+  name         String
+  condition    String   // Metric condition
+  threshold    Float
+  severity     String   @default("medium") // low, medium, high, critical
+  enabled      Boolean  @default(true)
+  actions      String[] // Alert actions (email, slack, webhook)
+  orgId        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  alerts       Alert[]
+
+  @@map("alert_rules")
+}
+
+model Alert {
+  id           String   @id @default(cuid())
+  ruleId       String
+  severity     String   // low, medium, high, critical
+  message      String
+  value        Float
+  threshold    Float
+  resolved     Boolean  @default(false)
+  resolvedAt   DateTime?
+  orgId        String?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  rule         AlertRule @relation(fields: [ruleId], references: [id])
+
+  @@map("alerts")
+}
+
+// Billing & Subscriptions
+model Subscription {
+  id                String   @id @default(cuid())
+  stripeCustomerId  String   @unique
+  stripeSubscriptionId String? @unique
+  plan              PlanType
+  status            SubscriptionStatus
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd Boolean  @default(false)
+  orgId             String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  PAST_DUE
+  UNPAID
+}
+
+// Audit & Analytics
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  resource    String
+  resourceId  String?
+  metadata    Json?
+  userId      String?
+  orgId       String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User?         @relation(fields: [userId], references: [id])
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+model Analytics {
+  id            String   @id @default(cuid())
+  metric        String
+  value         Float
+  dimensions    Json?    // additional context
+  date          DateTime
+  orgId         String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("analytics")
+}
+
+// Third-Party Integrations
+model Integration {
+  id            String    @id @default(cuid())
+  orgId         String
+  userId        String
+  platform      String    // e.g., "Google Drive", "Slack", "Stripe"
+  externalId    String?   // ID from the external service
+  name          String
+  type          String    // e.g., "oauth", "api_key", "webhook"
+  accessToken   String?   // Encrypted token
+  refreshToken  String?   // Encrypted refresh token
+  tokenExpiry   DateTime?
+  config        Json?     // Additional configuration
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  org           Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs          IntegrationLog[]
+
+  @@unique([orgId, platform, externalId])
+  @@map("integrations")
+}
+
+model IntegrationLog {
+  id            String    @id @default(cuid())
+  integrationId String
+  timestamp     DateTime  @default(now())
+  level         String    // e.g., "info", "warn", "error"
+  message       String
+  details       Json?
+
+  // Relations
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("integration_logs")
+}
+
+// Notifications
+model Notification {
+  id          String    @id @default(cuid())
+  title       String
+  message     String
+  type        String    // e.g., "info", "warning", "error", "success"
+  read        Boolean   @default(false)
+  readAt      DateTime?
+  archived    Boolean   @default(false)
+  archivedAt  DateTime?
+  data        Json?     // Additional notification data
+  userId      String?
+  orgId       String?
+  createdBy   String    // User ID who created the notification
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User?         @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [orgId], references: [id])
+  creator     User          @relation("NotificationCreator", fields: [createdBy], references: [id])
+
+  @@map("notifications")
+}

@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N8N Workflows Community Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metric { display: inline-block; margin: 10px; padding: 15px; background: #e3f2fd; border-radius: 5px; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #1976d2; }
+        .metric-label { font-size: 14px; color: #666; }
+        .rating-stars { color: #ffc107; }
+        .popular-item { padding: 10px; border-bottom: 1px solid #eee; }
+        .popular-item:last-child { border-bottom: none; }
+        .contributor { display: flex; justify-content: space-between; align-items: center; padding: 10px; }
+        .reputation { background: #4caf50; color: white; padding: 5px 10px; border-radius: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 N8N Workflows Community Dashboard</h1>
+        
+        <div class="card">
+            <h2>📊 Community Statistics</h2>
+            <div class="metric">
+                <div class="metric-value" id="total-workflows">--</div>
+                <div class="metric-label">Total Workflows</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="total-ratings">--</div>
+                <div class="metric-label">Total Ratings</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="total-reviews">--</div>
+                <div class="metric-label">Total Reviews</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="total-users">--</div>
+                <div class="metric-label">Active Users</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="avg-rating">--</div>
+                <div class="metric-label">Average Rating</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>⭐ Most Popular Workflows</h2>
+            <div id="popular-workflows"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🏆 Top Contributors</h2>
+            <div id="top-contributors"></div>
+        </div>
+        
+        <div class="card">
+            <h2>📈 Rating Distribution</h2>
+            <div id="rating-distribution"></div>
+        </div>
+        
+        <div class="card">
+            <h2>📊 Usage Statistics</h2>
+            <div id="usage-stats"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Load community data
+        fetch('/api/community/report')
+            .then(response => response.json())
+            .then(data => {
+                // Update metrics
+                document.getElementById('total-workflows').textContent = data.total_workflows || '0';
+                document.getElementById('total-ratings').textContent = data.total_ratings || '0';
+                document.getElementById('total-reviews').textContent = data.total_reviews || '0';
+                document.getElementById('total-users').textContent = data.total_users || '0';
+                document.getElementById('avg-rating').textContent = data.average_rating || '0.0';
+                
+                // Display popular workflows
+                const popularWorkflows = document.getElementById('popular-workflows');
+                if (data.most_popular_workflows) {
+                    data.most_popular_workflows.forEach((workflow, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'popular-item';
+                        div.innerHTML = `
+                            <strong>${index + 1}. ${workflow.name}</strong><br>
+                            <small>Rating: ${workflow.avg_rating} ⭐ | Usage: ${workflow.total_usage} | Reviews: ${workflow.total_reviews}</small>
+                        `;
+                        popularWorkflows.appendChild(div);
+                    });
+                }
+                
+                // Display top contributors
+                const topContributors = document.getElementById('top-contributors');
+                if (data.top_contributors) {
+                    data.top_contributors.forEach(contributor => {
+                        const div = document.createElement('div');
+                        div.className = 'contributor';
+                        div.innerHTML = `
+                            <span><strong>${contributor.username}</strong></span>
+                            <span class="reputation">${contributor.reputation_score} points</span>
+                        `;
+                        topContributors.appendChild(div);
+                    });
+                }
+                
+                // Display rating distribution
+                const ratingDist = document.getElementById('rating-distribution');
+                if (data.rating_distribution) {
+                    for (let rating = 5; rating >= 1; rating--) {
+                        const count = data.rating_distribution[rating] || 0;
+                        const div = document.createElement('div');
+                        div.innerHTML = `${rating} ⭐: ${count} ratings`;
+                        ratingDist.appendChild(div);
+                    }
+                }
+                
+                // Display usage statistics
+                const usageStats = document.getElementById('usage-stats');
+                if (data.usage_statistics) {
+                    Object.entries(data.usage_statistics).forEach(([action, count]) => {
+                        const div = document.createElement('div');
+                        div.innerHTML = `<strong>${action}:</strong> ${count}`;
+                        usageStats.appendChild(div);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading community data:', error);
+            });
+    </script>
+</body>
+</html>
+        

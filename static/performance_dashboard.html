@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N8N Workflows Performance Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metric { display: inline-block; margin: 10px; padding: 15px; background: #e3f2fd; border-radius: 5px; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #1976d2; }
+        .metric-label { font-size: 14px; color: #666; }
+        .chart { height: 300px; background: #fafafa; border: 1px solid #ddd; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+        .status-good { color: #4caf50; }
+        .status-warning { color: #ff9800; }
+        .status-error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 N8N Workflows Performance Dashboard</h1>
+        
+        <div class="card">
+            <h2>📊 Performance Metrics</h2>
+            <div class="metric">
+                <div class="metric-value" id="avg-response-time">--</div>
+                <div class="metric-label">Average Response Time (ms)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="total-queries">--</div>
+                <div class="metric-label">Total Queries Tested</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="optimization-status">--</div>
+                <div class="metric-label">Optimization Status</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>⚡ Query Performance</h2>
+            <div id="query-results"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🔧 Applied Optimizations</h2>
+            <div id="optimizations-list"></div>
+        </div>
+        
+        <div class="card">
+            <h2>📈 Performance Trends</h2>
+            <div class="chart">
+                <p>Performance monitoring chart would be displayed here</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Load performance data
+        fetch('/api/performance/benchmark')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('avg-response-time').textContent = data.average_response_time || '--';
+                document.getElementById('total-queries').textContent = data.total_queries || '--';
+                
+                // Display query results
+                const queryResults = document.getElementById('query-results');
+                if (data.queries) {
+                    data.queries.forEach(query => {
+                        const div = document.createElement('div');
+                        div.innerHTML = `
+                            <strong>${query.name}:</strong> 
+                            <span class="${query.avg_time_ms < 50 ? 'status-good' : query.avg_time_ms < 100 ? 'status-warning' : 'status-error'}">
+                                ${query.avg_time_ms}ms
+                            </span>
+                            (${query.result_count} results)
+                        `;
+                        queryResults.appendChild(div);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading performance data:', error);
+                document.getElementById('avg-response-time').textContent = 'Error';
+            });
+    </script>
+</body>
+</html>
+        

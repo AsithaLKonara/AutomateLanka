@@ -1,0 +1,212 @@
+{
+  "name": "Data Sync Template",
+  "description": "Synchronize data between different systems and platforms. Ideal for keeping databases and spreadsheets in sync.",
+  "category": "Data Processing & Analysis",
+  "pattern": "data_sync",
+  "difficulty": "Advanced",
+  "estimated_time": "1-2 hours",
+  "integrations": [
+    "noop",
+    "bitly",
+    "dropbox",
+    "gmail",
+    "googlecalendar",
+    "googledocs",
+    "googlesheets",
+    "pushbullet",
+    "youtube",
+    "reddit",
+    "stickynote",
+    "postgrestool",
+    "redistool",
+    "emailsendtool",
+    "gmailtool",
+    "googlecalendartool",
+    "googledocstool",
+    "googlesheetstool",
+    "twitter",
+    "calendly",
+    "emailreadimap",
+    "googledrive",
+    "gumroad",
+    "localfile",
+    "form",
+    "schedule",
+    "webhook",
+    "manual",
+    "executeworkflow",
+    "code",
+    "datetime",
+    "set",
+    "filter",
+    "limit",
+    "removeduplicates",
+    "splitout",
+    "aggregate",
+    "merge",
+    "summarize",
+    "converttofile",
+    "extractfromfile",
+    "html",
+    "markdown",
+    "renamekeys",
+    "sort",
+    "if",
+    "splitinbatches",
+    "wait",
+    "executecommand",
+    "httprequest",
+    "executiondata",
+    "ftp",
+    "respondtowebhook",
+    "rssfeedread",
+    "aitransform",
+    "stopanderror"
+  ],
+  "node_count": 201,
+  "use_cases": [
+    "Database synchronization",
+    "Spreadsheet updates",
+    "Cross-platform data sharing"
+  ],
+  "prerequisites": [
+    "Google Sheets API Access",
+    "Webhook URL"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "title": "Connect to Source",
+      "description": "Establish connection to the data source"
+    },
+    {
+      "step": 2,
+      "title": "Fetch Data",
+      "description": "Retrieve data from the source system"
+    },
+    {
+      "step": 3,
+      "title": "Transform Data",
+      "description": "Convert data to target format"
+    },
+    {
+      "step": 4,
+      "title": "Update Destination",
+      "description": "Write data to the destination system"
+    }
+  ],
+  "configuration": {
+    "source_connection": "source_credentials",
+    "destination_connection": "destination_credentials",
+    "sync_interval": "daily",
+    "data_mapping": "field_mapping_config"
+  },
+  "examples": [
+    {
+      "filename": "1612_Webhook_Code_Automate_Webhook.json",
+      "nodes": 51,
+      "integrations": [
+        "stickynote",
+        "set",
+        "httprequest",
+        "webhook",
+        "googledrive",
+        "googlesheets",
+        "code",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "1639_Wait_Webhook_Automation_Webhook.json",
+      "nodes": 101,
+      "integrations": [
+        "merge",
+        "noop",
+        "googledrive",
+        "stickynote",
+        "extractfromfile",
+        "set",
+        "webhook",
+        "httprequest",
+        "filter",
+        "notion",
+        "wait",
+        "form",
+        "googlesheets",
+        "notiontool",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0578_Wait_Schedule_Create_Webhook.json",
+      "nodes": 86,
+      "integrations": [
+        "googledrive",
+        "noop",
+        "stickynote",
+        "splitinbatches",
+        "wait",
+        "httprequest",
+        "googlesheets",
+        "merge",
+        "schedule",
+        "filter",
+        "set",
+        "aggregate",
+        "linear",
+        "manual",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "1736_Wait_Schedule_Automation_Webhook.json",
+      "nodes": 86,
+      "integrations": [
+        "googledrive",
+        "noop",
+        "stickynote",
+        "splitinbatches",
+        "wait",
+        "httprequest",
+        "googlesheets",
+        "merge",
+        "schedule",
+        "filter",
+        "set",
+        "aggregate",
+        "linear",
+        "manual",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "1282_Wait_Code_Import_Webhook.json",
+      "nodes": 192,
+      "integrations": [
+        "httprequest",
+        "code",
+        "wait",
+        "if",
+        "noop",
+        "stickynote",
+        "merge",
+        "googledrive",
+        "discord",
+        "schedule",
+        "googlesheets",
+        "set",
+        "readbinaryfile",
+        "writebinaryfile",
+        "stopanderror"
+      ]
+    }
+  ],
+  "tags": [
+    "data-sync",
+    "noop",
+    "bitly",
+    "dropbox",
+    "template",
+    "reusable"
+  ]
+}

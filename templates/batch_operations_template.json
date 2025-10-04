@@ -1,0 +1,207 @@
+{
+  "name": "Batch Operations Template",
+  "description": "Process large amounts of data in batches. Great for bulk operations and data migration.",
+  "category": "Data Processing & Analysis",
+  "pattern": "batch_operations",
+  "difficulty": "Advanced",
+  "estimated_time": "1-2 hours",
+  "integrations": [
+    "noop",
+    "bitly",
+    "dropbox",
+    "gmail",
+    "googlecalendar",
+    "googledocs",
+    "googlesheets",
+    "pushbullet",
+    "youtube",
+    "reddit",
+    "stickynote",
+    "postgrestool",
+    "redistool",
+    "emailsendtool",
+    "gmailtool",
+    "googlecalendartool",
+    "googledocstool",
+    "googlesheetstool",
+    "twitter",
+    "calendly",
+    "emailreadimap",
+    "googledrive",
+    "gumroad",
+    "localfile",
+    "form",
+    "schedule",
+    "webhook",
+    "manual",
+    "executeworkflow",
+    "code",
+    "datetime",
+    "set",
+    "filter",
+    "limit",
+    "removeduplicates",
+    "splitout",
+    "aggregate",
+    "merge",
+    "summarize",
+    "converttofile",
+    "extractfromfile",
+    "html",
+    "markdown",
+    "renamekeys",
+    "sort",
+    "if",
+    "splitinbatches",
+    "wait",
+    "executecommand",
+    "httprequest",
+    "executiondata",
+    "ftp",
+    "respondtowebhook",
+    "rssfeedread",
+    "aitransform",
+    "stopanderror"
+  ],
+  "node_count": 201,
+  "use_cases": [
+    "Bulk data processing",
+    "Data migration",
+    "Large-scale operations"
+  ],
+  "prerequisites": [
+    "Google Sheets API Access",
+    "Webhook URL"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "title": "Configure Trigger",
+      "description": "Set up the workflow trigger"
+    },
+    {
+      "step": 2,
+      "title": "Process Data",
+      "description": "Handle the incoming data"
+    },
+    {
+      "step": 3,
+      "title": "Apply Logic",
+      "description": "Execute business logic"
+    },
+    {
+      "step": 4,
+      "title": "Complete Action",
+      "description": "Perform the final action"
+    }
+  ],
+  "configuration": {},
+  "examples": [
+    {
+      "filename": "1132_Webhook_Extractfromfile_Process_Webhook.json",
+      "nodes": 31,
+      "integrations": [
+        "webhook",
+        "googlesheets",
+        "splitinbatches",
+        "stickynote",
+        "extractfromfile",
+        "manual",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0672_Webhook_Schedule_Update_Webhook.json",
+      "nodes": 101,
+      "integrations": [
+        "manual",
+        "stickynote",
+        "noop",
+        "switch",
+        "if",
+        "splitinbatches",
+        "n8n",
+        "httprequest",
+        "webhook",
+        "respondtowebhook",
+        "schedule",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "1897_Webhook_Filter_Sync_Webhook.json",
+      "nodes": 400,
+      "integrations": [
+        "httprequest",
+        "notion",
+        "code",
+        "form",
+        "if",
+        "crypto",
+        "webhook",
+        "respondtowebhook",
+        "todoist",
+        "comparedatasets",
+        "splitinbatches",
+        "set",
+        "redis",
+        "filter",
+        "aggregate",
+        "schedule",
+        "merge",
+        "html",
+        "gmail",
+        "stickynote",
+        "executeworkflow",
+        "noop",
+        "switch",
+        "executiondata",
+        "splitout",
+        "stopanderror",
+        "wait"
+      ]
+    },
+    {
+      "filename": "1694_Webhook_HTTP_Automation_Webhook.json",
+      "nodes": 44,
+      "integrations": [
+        "noop",
+        "googlesheets",
+        "httprequest",
+        "executeworkflow",
+        "splitinbatches",
+        "stickynote",
+        "set",
+        "markdown",
+        "webhook",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0881_Googletasks_HTTP_Update_Webhook.json",
+      "nodes": 39,
+      "integrations": [
+        "splitinbatches",
+        "merge",
+        "if",
+        "httprequest",
+        "stickynote",
+        "html",
+        "googletasks",
+        "manual",
+        "noop",
+        "set",
+        "googlesheets",
+        "stopanderror"
+      ]
+    }
+  ],
+  "tags": [
+    "batch-operations",
+    "noop",
+    "bitly",
+    "dropbox",
+    "template",
+    "reusable"
+  ]
+}

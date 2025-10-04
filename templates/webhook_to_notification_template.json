@@ -1,0 +1,190 @@
+{
+  "name": "Webhook To Notification Template",
+  "description": "Automatically send notifications when webhook events are received. Perfect for real-time alerts and status updates.",
+  "category": "Communication & Messaging",
+  "pattern": "webhook_to_notification",
+  "difficulty": "Advanced",
+  "estimated_time": "1-2 hours",
+  "integrations": [
+    "noop",
+    "bitly",
+    "dropbox",
+    "gmail",
+    "googlecalendar",
+    "googledocs",
+    "googlesheets",
+    "pushbullet",
+    "youtube",
+    "reddit",
+    "stickynote",
+    "postgrestool",
+    "redistool",
+    "emailsendtool",
+    "gmailtool",
+    "googlecalendartool",
+    "googledocstool",
+    "googlesheetstool",
+    "twitter",
+    "calendly",
+    "emailreadimap",
+    "googledrive",
+    "gumroad",
+    "localfile",
+    "form",
+    "schedule",
+    "webhook",
+    "manual",
+    "executeworkflow",
+    "code",
+    "datetime",
+    "set",
+    "filter",
+    "limit",
+    "removeduplicates",
+    "splitout",
+    "aggregate",
+    "merge",
+    "summarize",
+    "converttofile",
+    "extractfromfile",
+    "html",
+    "markdown",
+    "renamekeys",
+    "sort",
+    "if",
+    "splitinbatches",
+    "wait",
+    "executecommand",
+    "httprequest",
+    "executiondata",
+    "ftp",
+    "respondtowebhook",
+    "rssfeedread",
+    "aitransform",
+    "stopanderror"
+  ],
+  "node_count": 201,
+  "use_cases": [
+    "Real-time alerts and notifications",
+    "Status updates and monitoring",
+    "Event-driven communications"
+  ],
+  "prerequisites": [
+    "Google Sheets API Access",
+    "Webhook URL"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "title": "Set up Webhook Trigger",
+      "description": "Configure webhook to receive incoming data"
+    },
+    {
+      "step": 2,
+      "title": "Process Incoming Data",
+      "description": "Parse and validate the webhook payload"
+    },
+    {
+      "step": 3,
+      "title": "Format Notification",
+      "description": "Prepare the message content for notification"
+    },
+    {
+      "step": 4,
+      "title": "Send Notification",
+      "description": "Deliver notification to the target platform"
+    }
+  ],
+  "configuration": {
+    "webhook_url": "https://your-domain.com/webhook/endpoint",
+    "notification_service": "telegram",
+    "bot_token": "your_bot_token",
+    "chat_id": "your_chat_id"
+  },
+  "examples": [
+    {
+      "filename": "1477_Webhook_Slack_Update_Webhook.json",
+      "nodes": 24,
+      "integrations": [
+        "stickynote",
+        "set",
+        "googlesheets",
+        "if",
+        "webhook",
+        "gmail",
+        "slack",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "1502_Webhook_Slack_Automate_Webhook.json",
+      "nodes": 52,
+      "integrations": [
+        "respondtowebhook",
+        "noop",
+        "if",
+        "slack",
+        "stickynote",
+        "webhook",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0453_Webhook_Code_Create_Webhook.json",
+      "nodes": 120,
+      "integrations": [
+        "slack",
+        "httprequest",
+        "if",
+        "stickynote",
+        "set",
+        "executeworkflow",
+        "merge",
+        "switch",
+        "webhook",
+        "code",
+        "postgres",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0295_Webhook_Dropcontact_Create_Webhook.json",
+      "nodes": 40,
+      "integrations": [
+        "lemlist",
+        "hubspot",
+        "if",
+        "webhook",
+        "dropcontact",
+        "slack",
+        "stopanderror",
+        "stickynote"
+      ]
+    },
+    {
+      "filename": "0644_Webhook_Slack_Create_Webhook.json",
+      "nodes": 202,
+      "integrations": [
+        "thehiveproject",
+        "stickynote",
+        "set",
+        "httprequest",
+        "if",
+        "noop",
+        "slack",
+        "respondtowebhook",
+        "switch",
+        "webhook",
+        "stopanderror"
+      ]
+    }
+  ],
+  "tags": [
+    "webhook-to-notification",
+    "noop",
+    "bitly",
+    "dropbox",
+    "template",
+    "reusable"
+  ]
+}

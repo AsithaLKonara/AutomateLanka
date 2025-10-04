@@ -1,0 +1,180 @@
+{
+  "name": "Conditional Processing Template",
+  "description": "Process data based on conditions and rules. Ideal for business logic automation.",
+  "category": "Business Process Automation",
+  "pattern": "conditional_processing",
+  "difficulty": "Advanced",
+  "estimated_time": "1-2 hours",
+  "integrations": [
+    "noop",
+    "bitly",
+    "dropbox",
+    "gmail",
+    "googlecalendar",
+    "googledocs",
+    "googlesheets",
+    "pushbullet",
+    "youtube",
+    "reddit",
+    "stickynote",
+    "postgrestool",
+    "redistool",
+    "emailsendtool",
+    "gmailtool",
+    "googlecalendartool",
+    "googledocstool",
+    "googlesheetstool",
+    "twitter",
+    "calendly",
+    "emailreadimap",
+    "googledrive",
+    "gumroad",
+    "localfile",
+    "form",
+    "schedule",
+    "webhook",
+    "manual",
+    "executeworkflow",
+    "code",
+    "datetime",
+    "set",
+    "filter",
+    "limit",
+    "removeduplicates",
+    "splitout",
+    "aggregate",
+    "merge",
+    "summarize",
+    "converttofile",
+    "extractfromfile",
+    "html",
+    "markdown",
+    "renamekeys",
+    "sort",
+    "if",
+    "splitinbatches",
+    "wait",
+    "executecommand",
+    "httprequest",
+    "executiondata",
+    "ftp",
+    "respondtowebhook",
+    "rssfeedread",
+    "aitransform",
+    "stopanderror"
+  ],
+  "node_count": 201,
+  "use_cases": [
+    "Business rule automation",
+    "Data routing and filtering",
+    "Decision-based workflows"
+  ],
+  "prerequisites": [
+    "Google Sheets API Access",
+    "Webhook URL"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "title": "Configure Trigger",
+      "description": "Set up the workflow trigger"
+    },
+    {
+      "step": 2,
+      "title": "Process Data",
+      "description": "Handle the incoming data"
+    },
+    {
+      "step": 3,
+      "title": "Apply Logic",
+      "description": "Execute business logic"
+    },
+    {
+      "step": 4,
+      "title": "Complete Action",
+      "description": "Perform the final action"
+    }
+  ],
+  "configuration": {},
+  "examples": [
+    {
+      "filename": "0420_Hunter_Form_Create_Triggered.json",
+      "nodes": 21,
+      "integrations": [
+        "form",
+        "hunter",
+        "if",
+        "stickynote",
+        "clearbit",
+        "hubspot",
+        "noop",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0361_Hunter_Noop_Send_Triggered.json",
+      "nodes": 17,
+      "integrations": [
+        "noop",
+        "if",
+        "hunter",
+        "form",
+        "sendgrid",
+        "stickynote",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0436_Hunter_Pipedrive_Create_Triggered.json",
+      "nodes": 25,
+      "integrations": [
+        "stickynote",
+        "form",
+        "if",
+        "noop",
+        "hunter",
+        "clearbit",
+        "pipedrive",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0424_Hunter_Form_Send_Webhook.json",
+      "nodes": 31,
+      "integrations": [
+        "form",
+        "if",
+        "stickynote",
+        "noop",
+        "httprequest",
+        "hunter",
+        "gmail",
+        "stopanderror"
+      ]
+    },
+    {
+      "filename": "0426_Hunter_Form_Send_Webhook.json",
+      "nodes": 34,
+      "integrations": [
+        "stickynote",
+        "form",
+        "if",
+        "noop",
+        "httprequest",
+        "hunter",
+        "gmail",
+        "set",
+        "hubspot",
+        "stopanderror"
+      ]
+    }
+  ],
+  "tags": [
+    "conditional-processing",
+    "noop",
+    "bitly",
+    "dropbox",
+    "template",
+    "reusable"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "templates": [
+    "webhook_to_notification",
+    "data_sync",
+    "form_processing",
+    "api_integration",
+    "conditional_processing",
+    "batch_operations"
+  ],
+  "categories": {
+    "Communication & Messaging": [
+      "webhook_to_notification"
+    ],
+    "Data Processing & Analysis": [
+      "data_sync",
+      "form_processing",
+      "batch_operations"
+    ],
+    "Web Scraping & Data Extraction": [
+      "api_integration"
+    ],
+    "Business Process Automation": [
+      "conditional_processing"
+    ]
+  },
+  "difficulty_levels": {
+    "Advanced": [
+      "webhook_to_notification",
+      "data_sync",
+      "form_processing",
+      "api_integration",
+      "conditional_processing",
+      "batch_operations"
+    ]
+  },
+  "total_templates": 6
+}
