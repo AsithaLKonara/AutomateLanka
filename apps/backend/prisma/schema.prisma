@@ -6,6 +6,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
   // For local development with SQLite, uncomment below and comment PostgreSQL:
+  // Note: SQLite requires schema modifications (Json -> String, arrays -> JSON strings)
   // provider = "sqlite"
   // url      = "file:./dev.db"
 }
