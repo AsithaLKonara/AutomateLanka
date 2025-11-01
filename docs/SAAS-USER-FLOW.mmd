@@ -1,0 +1,111 @@
+%% AutomateLanka SaaS Platform - Complete User Flow Diagram
+%% Render with: https://mermaid.live/ or embed in docs
+
+flowchart TD
+    %% Entry Point
+    A0([🌐 Landing Page<br/>http://localhost:3000/]) --> A1{User Authenticated?}
+    
+    %% Guest Path
+    A1 -- No --> B0[🧭 Explore Public Pages]
+    B0 --> B1[View Homepage Stats<br/>→ GET /api/workflows/stats]
+    B0 --> B2[AI-Powered Search Guest Mode<br/>→ /ai-search]
+    B0 --> B3[Browse All Workflows<br/>→ /n8n-workflows]
+    B3 --> B4[View Public Workflow Detail<br/>→ /api/workflows/:id]
+    B4 --> B5[[⬇️ Download Workflow JSON]]
+    B0 --> B6[🪪 Register / Login CTA]
+    B6 --> C0([🧾 Sign Up Form])
+    
+    %% Authentication
+    C0 --> C1[POST /api/auth/register]
+    C1 --> C2[Backend creates:<br/>• user<br/>• default workspace<br/>• membership owner]
+    C2 --> C3[Return JWT Tokens + workspace_id]
+    C3 --> D0([🏠 Redirect to Dashboard])
+    A1 -- Yes --> D0
+    
+    %% Authenticated Area
+    D0 --> D1[🏠 Workspace Dashboard<br/>/w/:workspaceId/dashboard]
+    D1 --> D2{User Action?}
+    
+    %% Smart Search Path
+    D2 --> E0[🔍 AI Smart Search]
+    E0 --> E1[User enters query<br/>Send Slack message when form submitted]
+    E1 --> E2[GET /api/ai-search/semantic?q=...]
+    E2 --> E3[Smart Search Service<br/>→ intent detection + FTS5 + scoring]
+    E3 --> E4[[🧠 Display Results<br/>Ranked list + match explanation]]
+    E4 --> E5[User clicks a workflow]
+    E5 --> E6[View Workflow Detail Page]
+    E6 --> E7[[⬇️ Download or ▶️ Run inside platform]]
+    
+    %% Browse Path
+    D2 --> F0[📚 Browse Workflows]
+    F0 --> F1[GET /api/workflows?workspace=:id]
+    F1 --> F2[[🧾 Filter / Sort / Paginate]]
+    F2 --> F3[Click workflow → View Details]
+    F3 --> F4[[⬇️ Download or ▶️ Run inside platform]]
+    
+    %% Create Workflow
+    D2 --> G0[➕ Create Workflow]
+    G0 --> G1[Create Workflow Page<br/>/w/:workspaceId/workflows/new]
+    G1 --> G2[Upload or design JSON]
+    G2 --> G3[POST /api/workflows<br/>→ Store JSON + metadata]
+    G3 --> G4[[✅ Workflow saved<br/>Show editor view]]
+    G4 --> G5[User clicks ▶️ Run]
+    
+    %% Run Workflow
+    G5 --> R0[POST /api/workflows/:id/run]
+    E7 --> R0
+    F4 --> R0
+    R0 --> R1[Backend creates run record]
+    R1 --> R2[Queue Job → Redis/Bull]
+    R2 --> R3[Worker fetches & executes nodes]
+    R3 --> R4[Update DB with run logs & status]
+    R4 --> R5[[🟢 Run complete<br/>Show results in UI]]
+    R5 --> R6[[📜 Save run history<br/>/api/runs]]
+    
+    %% Integrations
+    D2 --> J0[🔌 Connect Integrations]
+    J0 --> J1[Connect Slack / Gmail / HTTP]
+    J1 --> J2[POST /api/integrations/:type/connect]
+    J2 --> J3[OAuth / API key stored encrypted]
+    J3 --> J4[[🔌 Integration ready for workflows]]
+    
+    %% Membership
+    D2 --> I0[👥 Manage Members]
+    I0 --> I1[Invite new member]
+    I1 --> I2[POST /api/workspaces/:id/invite]
+    I2 --> I3[Send invitation email]
+    I3 --> I4[[👤 Member joins workspace]]
+    I4 --> I5[Membership role assigned]
+    
+    %% Billing
+    D2 --> H0[💳 Manage Billing]
+    H0 --> H1[GET /api/billing/plans]
+    H1 --> H2[User selects plan]
+    H2 --> H3[POST /api/billing/subscribe → Stripe Checkout]
+    H3 --> H4[Stripe Webhook → /api/billing/webhook]
+    H4 --> H5[[💳 Workspace plan updated]]
+    H5 --> H6[Track usage<br/>/api/usage]
+    
+    %% Admin
+    A0 --> Z0[🔐 Admin Portal internal]
+    Z0 --> Z1[View system stats<br/>/api/admin/stats]
+    Z1 --> Z2[Manage users / workflows / billing]
+    
+    %% Logout
+    D1 --> L0[🚪 Logout]
+    L0 --> L1[POST /api/auth/logout]
+    L1 --> A0
+    
+    %% Styling
+    classDef publicClass fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    classDef authClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef workspaceClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef actionClass fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef billingClass fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    
+    class B0,B1,B2,B3,B4,B5,B6 publicClass
+    class C0,C1,C2,C3 authClass
+    class D0,D1,D2,E0,F0,G0,H0,I0,J0 workspaceClass
+    class R0,R1,R2,R3,R4,R5,R6 actionClass
+    class H1,H2,H3,H4,H5,H6 billingClass
+
