@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // For local development with SQLite, uncomment below and comment PostgreSQL:
+  // provider = "sqlite"
+  // url      = "file:./dev.db"
+}
+
+// ============ USER & AUTH ============
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  passwordHash  String        @map("password_hash")
+  name          String?
+  role          String        @default("user") // user, admin
+  isVerified    Boolean       @default(false) @map("is_verified")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  lastLoginAt   DateTime?     @map("last_login_at")
+  
+  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+  memberships     Membership[]
+  workflows       Workflow[]
+  runs            Run[]
+  integrations    Integration[]
+  refreshTokens   RefreshToken[]
+  
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+// ============ WORKSPACE (TENANT) ============
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  ownerId   String   @map("owner_id")
+  planId    String?  @map("plan_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  owner         User          @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  plan          Plan?         @relation(fields: [planId], references: [id])
+  memberships   Membership[]
+  workflows     Workflow[]
+  runs          Run[]
+  integrations  Integration[]
+  subscription  Subscription?
+  usageRecords  UsageRecord[]
+  apiKeys       ApiKey[]
+  
+  @@map("workspaces")
+}
+
+model Membership {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  workspaceId String    @map("workspace_id")
+  role        String    @default("member") // owner, admin, member
+  invitedBy   String?   @map("invited_by")
+  invitedAt   DateTime  @default(now()) @map("invited_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, workspaceId])
+  @@map("memberships")
+}
+
+// ============ WORKFLOWS ============
+model Workflow {
+  id            String   @id @default(uuid())
+  workspaceId   String   @map("workspace_id")
+  name          String
+  filename      String?
+  json          Json     // Full n8n workflow definition
+  active        Boolean  @default(false)
+  public        Boolean  @default(false)
+  tags          String[]
+  nodesCount    Int      @default(0) @map("nodes_count")
+  integrations  String[]
+  category      String?
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  popularity    Int      @default(0)
+  usageCount    Int      @default(0) @map("usage_count")
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator   User      @relation(fields: [createdBy], references: [id])
+  runs      Run[]
+  versions  WorkflowVersion[]
+  
+  @@index([workspaceId])
+  @@index([active])
+  @@index([public])
+  @@map("workflows")
+}
+
+model WorkflowVersion {
+  id         String   @id @default(uuid())
+  workflowId String   @map("workflow_id")
+  version    Int
+  json       Json
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@unique([workflowId, version])
+  @@map("workflow_versions")
+}
+
+// ============ RUNS (EXECUTIONS) ============
+model Run {
+  id              String    @id @default(uuid())
+  workflowId      String    @map("workflow_id")
+  workspaceId     String    @map("workspace_id")
+  triggeredBy     String?   @map("triggered_by")
+  triggerType     String?   @map("trigger_type") // manual, webhook, schedule
+  status          String    @default("queued") // queued, running, success, failed, cancelled
+  startedAt       DateTime? @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  durationMs      Int?      @map("duration_ms")
+  inputData       Json?     @map("input_data")
+  outputData      Json?     @map("output_data")
+  errorMessage    String?   @map("error_message")
+  logs            String?
+  nodeExecutions  Int       @default(0) @map("node_executions")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  workflow  Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [triggeredBy], references: [id])
+  
+  @@index([workflowId])
+  @@index([workspaceId])
+  @@index([status])
+  @@map("runs")
+}
+
+// ============ INTEGRATIONS ============
+model Integration {
+  id                   String    @id @default(uuid())
+  workspaceId          String    @map("workspace_id")
+  type                 String    // slack, gmail, sheets, etc.
+  name                 String?
+  encryptedCredentials String    @map("encrypted_credentials")
+  metadata             Json?
+  connectedBy          String    @map("connected_by")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  lastUsedAt           DateTime? @map("last_used_at")
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [connectedBy], references: [id])
+  
+  @@map("integrations")
+}
+
+// ============ BILLING ============
+model Plan {
+  id             String  @id @default(uuid())
+  name           String
+  slug           String  @unique
+  priceMonthly   Decimal @map("price_monthly") @db.Decimal(10, 2)
+  priceYearly    Decimal @map("price_yearly") @db.Decimal(10, 2)
+  runsPerMonth   Int     @map("runs_per_month")
+  maxWorkflows   Int     @map("max_workflows")
+  maxMembers     Int     @map("max_members")
+  features       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  
+  workspaces    Workspace[]
+  subscriptions Subscription[]
+  
+  @@map("plans")
+}
+
+model Subscription {
+  id                    String    @id @default(uuid())
+  workspaceId           String    @unique @map("workspace_id")
+  planId                String    @map("plan_id")
+  stripeSubscriptionId  String?   @map("stripe_subscription_id")
+  stripeCustomerId      String?   @map("stripe_customer_id")
+  status                String    // active, cancelled, past_due
+  currentPeriodStart    DateTime  @map("current_period_start")
+  currentPeriodEnd      DateTime  @map("current_period_end")
+  cancelAtPeriodEnd     Boolean   @default(false) @map("cancel_at_period_end")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan      Plan      @relation(fields: [planId], references: [id])
+  
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id              String   @id @default(uuid())
+  workspaceId     String   @map("workspace_id")
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+  runsCount       Int      @default(0) @map("runs_count")
+  nodeExecutions  Int      @default(0) @map("node_executions")
+  apiCalls        Int      @default(0) @map("api_calls")
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  @@unique([workspaceId, periodStart])
+  @@map("usage_records")
+}
+
+// ============ API KEYS ============
+model ApiKey {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  keyHash     String    @map("key_hash")
+  name        String?
+  scopes      String[]
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  @@map("api_keys")
+}
+
