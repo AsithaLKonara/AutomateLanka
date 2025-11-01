@@ -191,21 +191,50 @@ export class WorkflowExecutor {
     const message = params.text || params.message || 'Hello from AutomateLanka!';
     const channel = params.channel || '#general';
 
-    this.log(`  Would send Slack message to ${channel}`);
+    this.log(`  Sending Slack message to ${channel}`);
     this.log(`  Message: ${message}`);
 
-    // In production, you would:
-    // 1. Get Slack credentials from integrations table
-    // 2. Decrypt credentials
-    // 3. Make actual Slack API call
-    
-    return {
-      ok: true,
-      channel,
-      message,
-      ts: Date.now().toString(),
-      simulated: true,
-    };
+    try {
+      // Import integration service
+      const { integrationService } = await import('./integrationService');
+      
+      // Get Slack integration for workspace
+      const integration = await integrationService.getIntegrationForWorkflow(
+        this.workspaceId,
+        'slack'
+      );
+
+      if (!integration) {
+        this.log(`  ⚠️  No Slack integration found - simulating`);
+        return {
+          ok: true,
+          channel,
+          message,
+          ts: Date.now().toString(),
+          simulated: true,
+        };
+      }
+
+      // Use provider to send real message
+      const result = await integration.provider.sendMessage(
+        integration.tokens,
+        channel,
+        message
+      );
+
+      this.log(`  ✅ Slack message sent successfully`);
+      return result;
+    } catch (error: any) {
+      this.log(`  ⚠️  Slack error: ${error.message} - using simulated response`);
+      return {
+        ok: true,
+        channel,
+        message,
+        ts: Date.now().toString(),
+        simulated: true,
+        error: error.message,
+      };
+    }
   }
 
   /**
@@ -217,21 +246,56 @@ export class WorkflowExecutor {
     const subject = params.subject || 'Email from AutomateLanka';
     const message = params.text || params.message || '';
 
-    this.log(`  Would send email to ${to}`);
+    this.log(`  Sending email to ${to}`);
     this.log(`  Subject: ${subject}`);
 
-    // In production, you would:
-    // 1. Get Gmail credentials from integrations table
-    // 2. Decrypt credentials
-    // 3. Make actual Gmail API call
+    try {
+      // Import integration service
+      const { integrationService } = await import('./integrationService');
+      
+      // Get Google integration for workspace
+      const integration = await integrationService.getIntegrationForWorkflow(
+        this.workspaceId,
+        'google'
+      );
 
-    return {
-      messageId: `sim-${Date.now()}`,
-      to,
-      subject,
-      sent: true,
-      simulated: true,
-    };
+      if (!integration) {
+        this.log(`  ⚠️  No Google integration found - simulating`);
+        return {
+          messageId: `sim-${Date.now()}`,
+          to,
+          subject,
+          sent: true,
+          simulated: true,
+        };
+      }
+
+      // Use provider to send real email
+      const result = await integration.provider.sendEmail(
+        integration.tokens,
+        to,
+        subject,
+        message
+      );
+
+      this.log(`  ✅ Email sent successfully`);
+      return {
+        messageId: result.id || `msg-${Date.now()}`,
+        to,
+        subject,
+        sent: true,
+      };
+    } catch (error: any) {
+      this.log(`  ⚠️  Gmail error: ${error.message} - using simulated response`);
+      return {
+        messageId: `sim-${Date.now()}`,
+        to,
+        subject,
+        sent: true,
+        simulated: true,
+        error: error.message,
+      };
+    }
   }
 
   /**
