@@ -1,0 +1,40 @@
+# Python files
+*.py
+__pycache__
+venv
+*.pyc
+
+# Backend (if deploying frontend only)
+apps/backend
+
+# Workflows (too large, use storage instead)
+# workflows
+
+# Database
+database
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+.next
+.turbo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+

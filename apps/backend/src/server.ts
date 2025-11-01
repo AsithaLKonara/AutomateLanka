@@ -26,6 +26,7 @@ import billingRoutes from './routes/billing'
 import notificationRoutes from './routes/notifications'
 import integrationRoutes from './routes/integrations'
 import healthRoutes from './routes/health'
+import workflowRoutes from './routes/workflows'
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler'
@@ -78,6 +79,7 @@ app.use('/api/billing', authMiddleware, billingRoutes)
 app.use('/api/notifications', authMiddleware, notificationRoutes)
 app.use('/api/integrations', authMiddleware, integrationRoutes)
 app.use('/api/health', healthRoutes)
+app.use('/api/workflows', workflowRoutes) // Public workflow routes
 
 // 404 handler
 app.use('*', (req, res) => {
