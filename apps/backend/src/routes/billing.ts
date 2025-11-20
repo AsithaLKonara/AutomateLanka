@@ -1,10 +1,9 @@
 import express from 'express'
-import { PrismaClient } from '@autolanka/db'
 import Stripe from 'stripe'
 import { z } from 'zod'
+import prisma from '../lib/prisma'
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -47,42 +46,46 @@ const createPaymentMethodSchema = z.object({
 // Get billing information
 router.get('/info', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId },
-      include: {
-        subscriptions: {
-          include: {
-            organization: true
-          }
-        }
-      }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    // Get Stripe customer
+    // Get user's workspace to access subscription
+    const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
+    // Get Stripe customer from subscription
     let stripeCustomer = null
-    if (user.stripe_customer_id) {
+    const stripeCustomerId = workspace?.subscription?.stripeCustomerId
+    if (stripeCustomerId) {
       try {
-        stripeCustomer = await stripe.customers.retrieve(user.stripe_customer_id)
+        stripeCustomer = await stripe.customers.retrieve(stripeCustomerId)
       } catch (error) {
         console.error('Error fetching Stripe customer:', error)
       }
     }
 
     // Get payment methods
-    let paymentMethods = []
-    if (user.stripe_customer_id) {
+    let paymentMethods: any[] = []
+    if (stripeCustomerId) {
       try {
         const methods = await stripe.paymentMethods.list({
-          customer: user.stripe_customer_id,
+          customer: stripeCustomerId,
           type: 'card'
         })
         paymentMethods = methods.data
@@ -91,15 +94,20 @@ router.get('/info', async (req, res) => {
       }
     }
 
+    // Get subscriptions for user's workspaces
+    const subscriptions = workspace?.subscription 
+      ? [workspace.subscription] 
+      : []
+
     res.json({
       user: {
         id: user.id,
         email: user.email,
-        stripeCustomerId: user.stripe_customer_id
+        stripeCustomerId: stripeCustomerId || null
       },
       stripeCustomer,
       paymentMethods,
-      subscriptions: user.subscriptions
+      subscriptions
     })
   } catch (error) {
     console.error('Error fetching billing info:', error)
@@ -110,47 +118,76 @@ router.get('/info', async (req, res) => {
 // Create or update Stripe customer
 router.post('/customer', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    let stripeCustomer
+    // Get user's workspace to access/update subscription
+    const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
 
-    if (user.stripe_customer_id) {
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    let stripeCustomer
+    const existingCustomerId = workspace.subscription?.stripeCustomerId
+
+    if (existingCustomerId) {
       // Update existing customer
-      stripeCustomer = await stripe.customers.update(user.stripe_customer_id, {
+      stripeCustomer = await stripe.customers.update(existingCustomerId, {
         email: user.email,
-        name: `${user.first_name} ${user.last_name}`,
+        name: user.name || user.email,
         metadata: {
           user_id: user.id,
-          clerk_id: user.clerk_id
+          workspace_id: workspace.id
         }
       })
     } else {
       // Create new customer
       stripeCustomer = await stripe.customers.create({
         email: user.email,
-        name: `${user.first_name} ${user.last_name}`,
+        name: user.name || user.email,
         metadata: {
           user_id: user.id,
-          clerk_id: user.clerk_id
+          workspace_id: workspace.id
         }
       })
 
-      // Update user with Stripe customer ID
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { stripe_customer_id: stripeCustomer.id }
-      })
+      // Update subscription with Stripe customer ID
+      if (workspace.subscription) {
+        await prisma.subscription.update({
+          where: { id: workspace.subscription.id },
+          data: { stripeCustomerId: stripeCustomer.id }
+        })
+      } else {
+        // Create subscription if it doesn't exist
+        await prisma.subscription.create({
+          data: {
+            workspaceId: workspace.id,
+            planId: workspace.planId || 'free', // Default to free plan
+            stripeCustomerId: stripeCustomer.id,
+            status: 'active',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+          }
+        })
+      }
     }
 
     res.json({ customer: stripeCustomer })
@@ -163,7 +200,9 @@ router.post('/customer', async (req, res) => {
 // Create payment method
 router.post('/payment-methods', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
@@ -171,14 +210,23 @@ router.post('/payment-methods', async (req, res) => {
     const validatedData = createPaymentMethodSchema.parse(req.body)
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    if (!user.stripe_customer_id) {
+    // Get user's workspace to access subscription
+    const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
+    const stripeCustomerId = workspace?.subscription?.stripeCustomerId
+    if (!stripeCustomerId) {
       return res.status(400).json({ error: 'No Stripe customer found. Create customer first.' })
     }
 
@@ -191,17 +239,17 @@ router.post('/payment-methods', async (req, res) => {
 
     // Attach to customer
     await stripe.paymentMethods.attach(paymentMethod.id, {
-      customer: user.stripe_customer_id
+      customer: stripeCustomerId
     })
 
     // Set as default if it's the first payment method
     const existingMethods = await stripe.paymentMethods.list({
-      customer: user.stripe_customer_id,
+      customer: stripeCustomerId,
       type: 'card'
     })
 
     if (existingMethods.data.length === 1) {
-      await stripe.customers.update(user.stripe_customer_id, {
+      await stripe.customers.update(stripeCustomerId, {
         invoice_settings: {
           default_payment_method: paymentMethod.id
         }
@@ -221,21 +269,36 @@ router.post('/payment-methods', async (req, res) => {
 // Get payment methods
 router.get('/payment-methods', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
-    if (!user || !user.stripe_customer_id) {
+    if (!user) {
+      return res.json({ paymentMethods: [] })
+    }
+
+    // Get user's workspace to access subscription
+    const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
+    const stripeCustomerId = workspace?.subscription?.stripeCustomerId
+    if (!stripeCustomerId) {
       return res.json({ paymentMethods: [] })
     }
 
     const paymentMethods = await stripe.paymentMethods.list({
-      customer: user.stripe_customer_id,
+      customer: stripeCustomerId,
       type: 'card'
     })
 
@@ -249,7 +312,9 @@ router.get('/payment-methods', async (req, res) => {
 // Delete payment method
 router.delete('/payment-methods/:paymentMethodId', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
@@ -257,16 +322,29 @@ router.delete('/payment-methods/:paymentMethodId', async (req, res) => {
     const { paymentMethodId } = req.params
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
-    if (!user || !user.stripe_customer_id) {
-      return res.status(404).json({ error: 'User or customer not found' })
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Get user's workspace to access subscription
+    const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
+    const stripeCustomerId = workspace?.subscription?.stripeCustomerId
+    if (!stripeCustomerId) {
+      return res.status(404).json({ error: 'Stripe customer not found' })
     }
 
     // Verify payment method belongs to customer
     const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId)
-    if (paymentMethod.customer !== user.stripe_customer_id) {
+    if (paymentMethod.customer !== stripeCustomerId) {
       return res.status(403).json({ error: 'Payment method does not belong to user' })
     }
 
@@ -283,7 +361,9 @@ router.delete('/payment-methods/:paymentMethodId', async (req, res) => {
 // Create subscription
 router.post('/subscriptions', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
@@ -291,62 +371,89 @@ router.post('/subscriptions', async (req, res) => {
     const validatedData = createSubscriptionSchema.parse(req.body)
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId },
-      include: {
-        organizations: true
-      }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    if (!user.stripe_customer_id) {
-      return res.status(400).json({ error: 'No Stripe customer found. Create customer first.' })
+    // Get user's workspace (or create one if none exists)
+    let workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
+    if (!workspace) {
+      // Create workspace if it doesn't exist
+      workspace = await prisma.workspace.create({
+        data: {
+          name: `${user.name || user.email}'s Workspace`,
+          slug: `${user.name?.toLowerCase().replace(/\s+/g, '-') || user.email.split('@')[0]}-workspace`,
+          ownerId: user.id
+        },
+        include: {
+          subscription: true
+        }
+      })
     }
 
-    // Get the first organization (or create one if none exists)
-    let organization = user.organizations[0]
-    if (!organization) {
-      organization = await prisma.organization.create({
-        data: {
-          name: `${user.first_name}'s Organization`,
-          slug: `${user.first_name.toLowerCase()}-org`,
-          created_by: user.id
-        }
-      })
-
-      // Add user to organization
-      await prisma.userOrganization.create({
-        data: {
+    // Get or create Stripe customer
+    let stripeCustomerId = workspace.subscription?.stripeCustomerId
+    if (!stripeCustomerId) {
+      // Create Stripe customer
+      const stripeCustomer = await stripe.customers.create({
+        email: user.email,
+        name: user.name || user.email,
+        metadata: {
           user_id: user.id,
-          org_id: organization.id,
-          role: 'OWNER'
+          workspace_id: workspace.id
         }
       })
+      stripeCustomerId = stripeCustomer.id
+
+      // Update or create subscription with customer ID
+      if (workspace.subscription) {
+        await prisma.subscription.update({
+          where: { id: workspace.subscription.id },
+          data: { stripeCustomerId: stripeCustomer.id }
+        })
+      } else {
+        await prisma.subscription.create({
+          data: {
+            workspaceId: workspace.id,
+            planId: workspace.planId || 'free',
+            stripeCustomerId: stripeCustomer.id,
+            status: 'active',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          }
+        })
+      }
     }
 
     // Create subscription
     const subscription = await stripe.subscriptions.create({
-      customer: user.stripe_customer_id,
+      customer: stripeCustomerId,
       items: [{ price: validatedData.priceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
-        organization_id: organization.id
+        workspace_id: workspace.id
       }
     })
 
-    // Save subscription to database
-    const dbSubscription = await prisma.subscription.create({
+    // Update subscription in database
+    const dbSubscription = await prisma.subscription.update({
+      where: { workspaceId: workspace.id },
       data: {
-        stripe_subscription_id: subscription.id,
-        stripe_price_id: validatedData.priceId,
-        status: subscription.status as any,
-        org_id: organization.id,
-        created_by: user.id
+        stripeSubscriptionId: subscription.id,
+        planId: validatedData.priceId, // Assuming priceId maps to planId
+        status: subscription.status as any
       }
     })
 
@@ -367,40 +474,50 @@ router.post('/subscriptions', async (req, res) => {
 // Get subscriptions
 router.get('/subscriptions', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId },
-      include: {
-        subscriptions: {
-          include: {
-            organization: true
-          }
-        }
-      }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
+    // Get user's workspaces and their subscriptions
+    const workspaces = await prisma.workspace.findMany({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
     // Fetch Stripe subscription details
     const subscriptionsWithStripe = await Promise.all(
-      user.subscriptions.map(async (sub) => {
-        try {
-          const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
-          return {
-            ...sub,
-            stripeSubscription
+      workspaces
+        .filter(w => w.subscription?.stripeSubscriptionId)
+        .map(async (w) => {
+          const sub = w.subscription!
+          try {
+            const stripeSubscription = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId!)
+            return {
+              ...sub,
+              workspace: { id: w.id, name: w.name },
+              stripeSubscription
+            }
+          } catch (error) {
+            console.error(`Error fetching Stripe subscription ${sub.stripeSubscriptionId}:`, error)
+            return {
+              ...sub,
+              workspace: { id: w.id, name: w.name }
+            }
           }
-        } catch (error) {
-          console.error(`Error fetching Stripe subscription ${sub.stripe_subscription_id}:`, error)
-          return sub
-        }
-      })
+        })
     )
 
     res.json({ subscriptions: subscriptionsWithStripe })
@@ -413,7 +530,9 @@ router.get('/subscriptions', async (req, res) => {
 // Update subscription
 router.put('/subscriptions/:subscriptionId', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
@@ -422,20 +541,25 @@ router.put('/subscriptions/:subscriptionId', async (req, res) => {
     const validatedData = updateSubscriptionSchema.parse(req.body)
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    // Verify subscription belongs to user
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        stripe_subscription_id: subscriptionId,
-        created_by: user.id
+    // Get user's workspaces
+    const workspaces = await prisma.workspace.findMany({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
       }
     })
+
+    // Verify subscription belongs to user's workspace
+    const subscription = workspaces
+      .map(w => w.subscription)
+      .find(sub => sub?.stripeSubscriptionId === subscriptionId)
 
     if (!subscription) {
       return res.status(404).json({ error: 'Subscription not found' })
@@ -454,9 +578,9 @@ router.put('/subscriptions/:subscriptionId', async (req, res) => {
 
     // Update database
     const updatedSubscription = await prisma.subscription.update({
-      where: { id: subscription.id },
+      where: { id: subscription!.id },
       data: {
-        stripe_price_id: validatedData.priceId || subscription.stripe_price_id,
+        planId: validatedData.priceId || subscription!.planId,
         status: stripeSubscription.status as any
       }
     })
@@ -477,7 +601,9 @@ router.put('/subscriptions/:subscriptionId', async (req, res) => {
 // Cancel subscription
 router.delete('/subscriptions/:subscriptionId', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
@@ -485,20 +611,25 @@ router.delete('/subscriptions/:subscriptionId', async (req, res) => {
     const { subscriptionId } = req.params
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    // Verify subscription belongs to user
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        stripe_subscription_id: subscriptionId,
-        created_by: user.id
+    // Get user's workspaces
+    const workspaces = await prisma.workspace.findMany({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
       }
     })
+
+    // Verify subscription belongs to user's workspace
+    const subscription = workspaces
+      .map(w => w.subscription)
+      .find(sub => sub?.stripeSubscriptionId === subscriptionId)
 
     if (!subscription) {
       return res.status(404).json({ error: 'Subscription not found' })
@@ -511,7 +642,7 @@ router.delete('/subscriptions/:subscriptionId', async (req, res) => {
     await prisma.subscription.update({
       where: { id: subscription.id },
       data: {
-        status: 'CANCELLED'
+        status: 'cancelled'
       }
     })
 
@@ -528,21 +659,36 @@ router.delete('/subscriptions/:subscriptionId', async (req, res) => {
 // Get invoices
 router.get('/invoices', async (req, res) => {
   try {
-    const userId = req.user?.id
+    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
+    // But authMiddleware.ts also augments the global type, so we need to cast
+    const userId = (req.user as any)?.id || (req.user as any)?.userId
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerk_id: userId }
+      where: { id: userId }
     })
 
-    if (!user || !user.stripe_customer_id) {
+    if (!user) {
+      return res.json({ invoices: [] })
+    }
+
+    // Get user's workspace to access subscription
+    const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: userId },
+      include: {
+        subscription: true
+      }
+    })
+
+    const stripeCustomerId = workspace?.subscription?.stripeCustomerId
+    if (!stripeCustomerId) {
       return res.json({ invoices: [] })
     }
 
     const invoices = await stripe.invoices.list({
-      customer: user.stripe_customer_id,
+      customer: stripeCustomerId,
       limit: 50
     })
 
@@ -563,7 +709,7 @@ router.get('/pricing', async (req, res) => {
     })
 
     // Group prices by product
-    const plans = prices.data.reduce((acc, price) => {
+    const plans = prices.data.reduce((acc: Record<string, any>, price) => {
       const product = price.product as any
       if (!acc[product.id]) {
         acc[product.id] = {
@@ -609,28 +755,35 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
-        await prisma.subscription.upsert({
-          where: { stripe_subscription_id: subscription.id },
-          update: {
-            status: subscription.status as any,
-            stripe_price_id: subscription.items.data[0]?.price.id
-          },
-          create: {
-            stripe_subscription_id: subscription.id,
-            stripe_price_id: subscription.items.data[0]?.price.id,
-            status: subscription.status as any,
-            org_id: subscription.metadata.organization_id,
-            created_by: subscription.metadata.user_id
-          }
-        })
+        // Find workspace from metadata
+        const workspaceId = subscription.metadata.workspace_id
+        if (workspaceId) {
+          await prisma.subscription.upsert({
+            where: { workspaceId },
+            update: {
+              status: subscription.status as any,
+              planId: subscription.items.data[0]?.price.id,
+              stripeSubscriptionId: subscription.id
+            },
+            create: {
+              workspaceId,
+              planId: subscription.items.data[0]?.price.id || 'free',
+              stripeSubscriptionId: subscription.id,
+              stripeCustomerId: subscription.customer as string,
+              status: subscription.status as any,
+              currentPeriodStart: new Date(subscription.current_period_start * 1000),
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+            }
+          })
+        }
         break
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
         await prisma.subscription.updateMany({
-          where: { stripe_subscription_id: subscription.id },
-          data: { status: 'CANCELLED' }
+          where: { stripeSubscriptionId: subscription.id },
+          data: { status: 'cancelled' }
         })
         break
       }
