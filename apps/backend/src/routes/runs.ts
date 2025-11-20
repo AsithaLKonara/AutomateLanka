@@ -1,11 +1,10 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/authMiddleware';
 import { checkRunLimit } from '../middleware/planLimitsMiddleware';
-import { PrismaClient } from '@prisma/client';
 import workflowQueue from '../config/queue';
+import prisma from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // All run routes require authentication
 router.use(authMiddleware);
@@ -245,7 +244,18 @@ router.post('/:id/cancel', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // TODO: Also cancel the Bull job if it's still in queue
+    // Cancel the Bull job if it's still in queue
+    try {
+      const workflowQueue = (await import('../config/queue')).default;
+      const jobs = await workflowQueue.getJobs(['active', 'waiting', 'delayed']);
+      const job = jobs.find(j => j.data.runId === req.params.id);
+      if (job) {
+        await job.remove();
+      }
+    } catch (error) {
+      console.error('Failed to cancel queue job:', error);
+      // Continue anyway - run is already marked as cancelled
+    }
 
     res.status(200).json({
       success: true,

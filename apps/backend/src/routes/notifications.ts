@@ -1,9 +1,8 @@
 import express from 'express'
-import { PrismaClient } from '@autolanka/db'
 import { z } from 'zod'
+import prisma from '../lib/prisma'
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Validation schemas
 const createNotificationSchema = z.object({

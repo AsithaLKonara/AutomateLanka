@@ -1,9 +1,8 @@
 import express from 'express'
-import { PrismaClient } from '@autolanka/db'
 import Redis from 'ioredis'
+import prisma from '../lib/prisma'
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Initialize Redis client
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
