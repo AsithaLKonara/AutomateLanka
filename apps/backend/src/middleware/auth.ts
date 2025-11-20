@@ -1,25 +1,21 @@
 import { Request, Response, NextFunction } from 'express'
-import { PrismaClient } from '@autolanka/db'
+import prisma from '../lib/prisma'
 
-const prisma = new PrismaClient()
-
-// Extend Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string
-        clerkId: string
-        email: string
-        firstName?: string
-        lastName?: string
-        imageUrl?: string
-      }
-    }
-  }
+// Note: This middleware uses a different user type than authMiddleware
+// It's kept for backward compatibility but should be migrated to use authMiddleware
+// Using a local interface to avoid conflicts with authMiddleware's global augmentation
+interface AuthUser {
+  id: string
+  email: string
+  name: string | null
+  role: string
 }
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+type AuthRequest = Request & {
+  user?: AuthUser
+}
+
+export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     // Get authorization header
     const authHeader = req.headers.authorization
@@ -48,27 +44,18 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     // For development, we'll extract user info from the token
     // In production, you should verify the token with Clerk's API
     try {
-      // Decode JWT token (this is a simplified approach)
-      // In production, use Clerk's verifyToken function
-      const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+      // Decode and verify JWT token
+      const { authService } = await import('../services/authService');
+      const payload = authService.verifyToken(token);
       
-      if (!decoded.sub) {
-        return res.status(401).json({ 
-          error: 'Unauthorized',
-          message: 'Invalid token' 
-        })
-      }
-
-      // Find user in database
+      // Find user in database using JWT payload
       const user = await prisma.user.findUnique({
-        where: { clerkId: decoded.sub },
+        where: { id: payload.userId },
         select: {
           id: true,
-          clerkId: true,
           email: true,
-          firstName: true,
-          lastName: true,
-          imageUrl: true
+          name: true,
+          role: true
         }
       })
 
@@ -79,8 +66,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         })
       }
 
-      // Add user to request
-      req.user = user
+      // Add user to request (cast to avoid conflict with authMiddleware's global type)
+      ;(req as any).user = user
       next()
       
     } catch (error) {
@@ -101,7 +88,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 }
 
 // Optional auth middleware for routes that work with or without auth
-export const optionalAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuthMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization
     
@@ -114,25 +101,22 @@ export const optionalAuthMiddleware = async (req: Request, res: Response, next: 
     // Try to authenticate, but don't fail if it doesn't work
     try {
       const token = authHeader.substring(7)
-      const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+      const { authService } = await import('../services/authService');
+      const payload = authService.verifyToken(token);
       
-      if (decoded.sub) {
-        const user = await prisma.user.findUnique({
-          where: { clerkId: decoded.sub },
-          select: {
-            id: true,
-            clerkId: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            imageUrl: true
-          }
-        })
-        
-        if (user) {
-          req.user = user
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true
         }
-      }
+      })
+      
+        if (user) {
+          ;(req as any).user = user
+        }
     } catch (error) {
       // Ignore auth errors for optional auth
       console.log('Optional auth failed:', error)
@@ -147,7 +131,7 @@ export const optionalAuthMiddleware = async (req: Request, res: Response, next: 
 }
 
 // Admin-only middleware
-export const adminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
       return res.status(401).json({ 
@@ -156,19 +140,22 @@ export const adminMiddleware = async (req: Request, res: Response, next: NextFun
       })
     }
 
-    // Check if user is admin in any organization
-    const userOrg = await prisma.userOrganization.findFirst({
-      where: {
-        userId: req.user.id,
-        role: { in: ['OWNER', 'ADMIN'] }
-      }
-    })
-
-    if (!userOrg) {
-      return res.status(403).json({ 
-        error: 'Forbidden',
-        message: 'Admin access required' 
+    // Check if user is admin (role check) or has admin membership
+    if (req.user.role !== 'admin') {
+      // Also check if user is owner/admin of any workspace
+      const membership = await prisma.membership.findFirst({
+        where: {
+          userId: req.user.id,
+          role: { in: ['owner', 'admin'] }
+        }
       })
+
+      if (!membership) {
+        return res.status(403).json({ 
+          error: 'Forbidden',
+          message: 'Admin access required' 
+        })
+      }
     }
 
     next()
@@ -183,7 +170,7 @@ export const adminMiddleware = async (req: Request, res: Response, next: NextFun
 }
 
 // Organization member middleware
-export const orgMemberMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const orgMemberMiddleware = async (req: AuthRequestWithOrg, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
       return res.status(401).json({ 
@@ -201,23 +188,28 @@ export const orgMemberMiddleware = async (req: Request, res: Response, next: Nex
       })
     }
 
-    // Check if user is member of the organization
-    const userOrg = await prisma.userOrganization.findFirst({
+    // Check if user is member of the workspace (using workspaceId as orgId)
+    const membership = await prisma.membership.findFirst({
       where: {
         userId: req.user.id,
-        orgId: orgId as string
+        workspaceId: orgId as string
       }
     })
 
-    if (!userOrg) {
+    if (!membership) {
       return res.status(403).json({ 
         error: 'Forbidden',
-        message: 'Organization access required' 
+        message: 'Workspace access required' 
       })
     }
 
-    // Add organization info to request
-    req.organization = userOrg
+    // Add membership info to request
+    req.organization = {
+      id: membership.id,
+      userId: membership.userId,
+      orgId: membership.workspaceId,
+      role: membership.role
+    }
     next()
     
   } catch (error) {
@@ -229,17 +221,14 @@ export const orgMemberMiddleware = async (req: Request, res: Response, next: Nex
   }
 }
 
-// Extend Request interface to include organization
-declare global {
-  namespace Express {
-    interface Request {
-      organization?: {
-        id: string
-        userId: string
-        orgId: string
-        role: string
-      }
-    }
+// Extend AuthRequest interface to include organization
+interface AuthRequestWithOrg extends AuthRequest {
+  organization?: {
+    id: string
+    userId: string
+    orgId: string
+    role: string
   }
 }
+
 
