@@ -3,10 +3,28 @@ import cors from 'cors'
 import helmet from 'helmet'
 import { createServer } from 'http'
 import { config } from 'dotenv'
-import { PrismaClient } from '@autolanka/db'
+import { initSentry, sentryRequestHandler, sentryErrorHandler } from './config/sentry'
+import { validateEnv } from './config/env'
+import prisma from './lib/prisma'
 
 // Load environment variables
 config()
+
+// Validate environment variables
+try {
+  validateEnv()
+  console.log('✅ Environment variables validated')
+} catch (error: any) {
+  console.error('❌ Environment validation failed:', error.message)
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1)
+  } else {
+    console.warn('⚠️  Continuing in development mode with invalid environment')
+  }
+}
+
+// Initialize Sentry before anything else
+initSentry()
 
 // Import routes
 import authRoutes from './routes/auth'
@@ -37,7 +55,9 @@ import { rateLimitService } from './services/rateLimitService'
 
 const app = express()
 const server = createServer(app)
-const prisma = new PrismaClient()
+
+// Sentry must be first middleware
+app.use(sentryRequestHandler)
 
 // Middleware
 app.use(helmet())
@@ -88,6 +108,9 @@ app.use('*', (req, res) => {
     message: `Route ${req.originalUrl} not found` 
   })
 })
+
+// Sentry error handler must be before other error handlers
+app.use(sentryErrorHandler)
 
 // Error handler
 app.use(errorHandler)
