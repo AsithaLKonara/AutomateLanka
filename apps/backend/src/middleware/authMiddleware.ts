@@ -4,15 +4,26 @@ import { TokenPayload } from '../utils/jwt';
 
 /**
  * Extended Express Request with authenticated user data
+ * Using Express namespace augmentation for type safety
  */
-export interface AuthRequest extends Request {
-  user?: TokenPayload & {
-    userId: string;
-    email: string;
-    workspaceId?: string;
-    role?: string;
-  };
+declare global {
+  namespace Express {
+    interface Request {
+      user?: TokenPayload & {
+        userId: string;
+        email: string;
+        workspaceId?: string;
+        role?: string;
+      };
+    }
+  }
 }
+
+/**
+ * Type alias for authenticated requests
+ * Can use Request directly now that we've augmented it
+ */
+export type AuthRequest = Request;
 
 /**
  * Authentication middleware
@@ -255,8 +266,7 @@ export const workspaceOwnerMiddleware = async (
   }
 
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
+    const prisma = (await import('../lib/prisma')).default;
 
     const membership = await prisma.membership.findUnique({
       where: {
@@ -267,7 +277,7 @@ export const workspaceOwnerMiddleware = async (
       },
     });
 
-    await prisma.$disconnect();
+    // Don't disconnect - using singleton
 
     if (!membership || membership.role !== 'owner') {
       res.status(403).json({
