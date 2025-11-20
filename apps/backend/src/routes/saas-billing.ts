@@ -1,8 +1,9 @@
-import { Router, Response } from 'express';
+import express, { Router, Response, Request } from 'express';
 import { billingService, CreateCheckoutSessionInput } from '../services/billingService';
 import { authMiddleware, AuthRequest } from '../middleware/authMiddleware';
 import { z } from 'zod';
 import Stripe from 'stripe';
+import prisma from '../lib/prisma';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -228,7 +229,8 @@ router.post(
   '/webhook',
   express.raw({ type: 'application/json' }),
   async (req: Request, res: Response) => {
-    const sig = req.headers['stripe-signature'];
+    // Access headers with proper typing
+    const sig = (req.headers as Record<string, string | string[] | undefined>)['stripe-signature'] as string | undefined;
 
     if (!sig) {
       return res.status(400).send('Missing stripe-signature header');
@@ -238,8 +240,10 @@ router.post(
 
     try {
       // Verify webhook signature
+      // req.body is a Buffer after express.raw() middleware
+      const body = req.body as unknown as Buffer;
       event = stripe.webhooks.constructEvent(
-        req.body,
+        body,
         sig,
         process.env.STRIPE_WEBHOOK_SECRET || ''
       );
@@ -306,12 +310,6 @@ router.get('/subscription', async (req: AuthRequest, res: Response) => {
     });
   }
 });
-
-// Fix: Import express and prisma
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 export default router;
 
