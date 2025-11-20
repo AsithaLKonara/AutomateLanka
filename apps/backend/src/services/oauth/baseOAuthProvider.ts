@@ -1,8 +1,6 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { encrypt, decrypt } from '../../utils/encryption';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 export interface OAuthTokens {
   accessToken: string;
