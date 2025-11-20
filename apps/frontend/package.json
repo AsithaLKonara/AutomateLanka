@@ -13,14 +13,15 @@
     "@autolanka/common": "file:../../packages/common",
     "@autolanka/ui": "file:../../packages/ui",
     "@clerk/nextjs": "^4.29.7",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@sentry/nextjs": "^7.120.4",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "lucide-react": "^0.294.0",
     "next": "14.2.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.294.0",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0",
-    "@radix-ui/react-slot": "^1.0.2"
+    "tailwind-merge": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.8.0",
