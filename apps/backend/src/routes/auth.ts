@@ -5,18 +5,18 @@ import { z } from 'zod';
 
 const router = Router();
 
-// Validation schemas
+// Validation schemas - must match RegisterInput interface exactly
 const registerSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   workspaceName: z.string().optional(),
-});
+}) satisfies z.ZodType<RegisterInput>;
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(1, 'Password is required'),
-});
+}) satisfies z.ZodType<LoginInput>;
 
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
@@ -47,7 +47,7 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
 
-    const input: RegisterInput = validation.data;
+    const input: RegisterInput = validation.data as RegisterInput;
 
     // Register user
     const result = await authService.register(input);
@@ -97,10 +97,14 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
 
-    const input: LoginInput = validation.data;
+    const input: LoginInput = validation.data as LoginInput;
+
+    // Get IP address and user agent for audit logging
+    const ipAddress = req.ip || req.socket.remoteAddress || undefined;
+    const userAgent = req.get('user-agent') || undefined;
 
     // Login user
-    const result = await authService.login(input);
+    const result = await authService.login(input, ipAddress, userAgent);
 
     res.status(200).json({
       success: true,
@@ -195,7 +199,16 @@ router.post('/logout', async (req: Request, res: Response) => {
       });
     }
 
-    await authService.logout(refreshToken);
+    // Get user ID from token if available for audit logging
+    let userId: string | undefined;
+    try {
+      const tokenPayload = authService.verifyToken(refreshToken);
+      userId = tokenPayload.userId;
+    } catch {
+      // Token might be invalid, continue with logout anyway
+    }
+
+    await authService.logout(refreshToken, userId);
 
     res.status(200).json({
       success: true,
