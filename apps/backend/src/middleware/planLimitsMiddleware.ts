@@ -13,20 +13,22 @@ export const checkWorkflowLimit = async (
 ): Promise<void> => {
   try {
     if (!req.user || !req.user.workspaceId) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Authentication required',
       });
+      return;
     }
 
     const check = await billingService.checkLimit(req.user.workspaceId, 'workflows');
 
     if (!check.allowed) {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'PlanLimitReached',
         message: check.reason || 'Workflow limit reached',
         action: 'upgrade',
       });
+      return;
     }
 
     next();
@@ -36,6 +38,7 @@ export const checkWorkflowLimit = async (
       error: 'ServerError',
       message: 'Failed to check workflow limit',
     });
+    return;
   }
 };
 
@@ -50,20 +53,22 @@ export const checkRunLimit = async (
 ): Promise<void> => {
   try {
     if (!req.user || !req.user.workspaceId) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Authentication required',
       });
+      return;
     }
 
     const check = await billingService.checkLimit(req.user.workspaceId, 'runs');
 
     if (!check.allowed) {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'PlanLimitReached',
         message: check.reason || 'Monthly run limit reached',
         action: 'upgrade',
       });
+      return;
     }
 
     next();
@@ -73,6 +78,7 @@ export const checkRunLimit = async (
       error: 'ServerError',
       message: 'Failed to check run limit',
     });
+    return;
   }
 };
 
@@ -87,20 +93,22 @@ export const checkMemberLimit = async (
 ): Promise<void> => {
   try {
     if (!req.user || !req.user.workspaceId) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Authentication required',
       });
+      return;
     }
 
     const check = await billingService.checkLimit(req.user.workspaceId, 'members');
 
     if (!check.allowed) {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'PlanLimitReached',
         message: check.reason || 'Member limit reached',
         action: 'upgrade',
       });
+      return;
     }
 
     next();
@@ -110,6 +118,7 @@ export const checkMemberLimit = async (
       error: 'ServerError',
       message: 'Failed to check member limit',
     });
+    return;
   }
 };
 
@@ -120,21 +129,23 @@ export const checkLimit = (type: 'runs' | 'workflows' | 'members') => {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user || !req.user.workspaceId) {
-        return res.status(401).json({
+        res.status(401).json({
           error: 'Unauthorized',
           message: 'Authentication required',
         });
+        return;
       }
 
       const check = await billingService.checkLimit(req.user.workspaceId, type);
 
       if (!check.allowed) {
-        return res.status(403).json({
+        res.status(403).json({
           error: 'PlanLimitReached',
           message: check.reason || `${type} limit reached`,
           action: 'upgrade',
           limitType: type,
         });
+        return;
       }
 
       next();
@@ -144,6 +155,7 @@ export const checkLimit = (type: 'runs' | 'workflows' | 'members') => {
         error: 'ServerError',
         message: `Failed to check ${type} limit`,
       });
+      return;
     }
   };
 };
