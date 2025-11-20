@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import { slackProvider } from './oauth/slackProvider';
 import { googleProvider } from './oauth/googleProvider';
 import { githubProvider } from './oauth/githubProvider';
 import { microsoftProvider } from './oauth/microsoftProvider';
 import { BaseOAuthProvider } from './oauth/baseOAuthProvider';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // Map of integration types to providers
 const providers: Record<string, BaseOAuthProvider> = {

@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { decrypt } from '../utils/encryption';
 import axios from 'axios';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export interface ExecutionResult {
   output: any;

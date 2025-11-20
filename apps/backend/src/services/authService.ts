@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import { hashPassword, comparePassword, validatePasswordStrength, generateResetToken, generateVerificationToken } from '../utils/password';
 import { generateTokenPair, verifyAccessToken, TokenPayload, generateAccessToken } from '../utils/jwt';
+import { auditService } from './auditService';
+import prisma from '../lib/prisma';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 export interface RegisterInput {
   email: string;
@@ -125,6 +124,9 @@ export class AuthService {
       },
     });
 
+    // Audit log: user registration
+    await auditService.logAuth('register', result.user.id);
+
     return {
       user: {
         id: result.user.id,
@@ -145,7 +147,7 @@ export class AuthService {
   /**
    * Login existing user
    */
-  async login(input: LoginInput): Promise<AuthResponse> {
+  async login(input: LoginInput, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
@@ -197,6 +199,9 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    // Audit log: user login
+    await auditService.logAuth('login', user.id, ipAddress, userAgent);
 
     return {
       user: {
@@ -261,10 +266,21 @@ export class AuthService {
   /**
    * Logout - revoke refresh token
    */
-  async logout(refreshToken: string): Promise<void> {
+  async logout(refreshToken: string, userId?: string): Promise<void> {
+    // Get user from token before deleting
+    const tokenRecord = await prisma.refreshToken.findFirst({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
     await prisma.refreshToken.deleteMany({
       where: { token: refreshToken },
     });
+
+    // Audit log: user logout
+    if (tokenRecord?.user || userId) {
+      await auditService.logAuth('logout', tokenRecord?.userId || userId!);
+    }
   }
 
   /**

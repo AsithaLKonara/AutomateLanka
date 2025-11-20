@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import workflowQueue from '../config/queue';
 import { WorkflowExecutor } from './workflowExecutor';
 import { billingService } from './billingService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export interface WorkflowJob {
   runId: string;
