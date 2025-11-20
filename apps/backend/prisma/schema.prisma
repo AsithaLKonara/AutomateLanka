@@ -29,6 +29,7 @@ model User {
   runs            Run[]
   integrations    Integration[]
   refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
   
   @@map("users")
 }
@@ -64,6 +65,7 @@ model Workspace {
   subscription  Subscription?
   usageRecords  UsageRecord[]
   apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
   
   @@map("workspaces")
 }
@@ -111,6 +113,9 @@ model Workflow {
   @@index([workspaceId])
   @@index([active])
   @@index([public])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([category])
   @@map("workflows")
 }
 
@@ -153,6 +158,9 @@ model Run {
   @@index([workflowId])
   @@index([workspaceId])
   @@index([status])
+  @@index([triggeredBy])
+  @@index([createdAt])
+  @@index([startedAt])
   @@map("runs")
 }
 
@@ -172,6 +180,9 @@ model Integration {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [connectedBy], references: [id])
   
+  @@index([workspaceId])
+  @@index([type])
+  @@index([connectedBy])
   @@map("integrations")
 }
 
@@ -226,6 +237,8 @@ model UsageRecord {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   
   @@unique([workspaceId, periodStart])
+  @@index([workspaceId])
+  @@index([periodStart])
   @@map("usage_records")
 }
 
@@ -242,6 +255,31 @@ model ApiKey {
   
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   
+  @@index([workspaceId])
+  @@index([expiresAt])
   @@map("api_keys")
+}
+
+// ============ AUDIT LOGS ============
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  workspaceId String? @map("workspace_id")
+  action      String   // login, logout, workspace_create, workflow_execute, billing_change, etc.
+  resource    String?  // workspace, workflow, subscription, etc.
+  resourceId  String?  @map("resource_id")
+  details     Json?    // Additional context
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 

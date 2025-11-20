@@ -1,3 +1,4 @@
+// @ts-ignore - Bull doesn't have proper TypeScript exports
 import Queue from 'bull';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
