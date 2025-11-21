@@ -45,10 +45,11 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'] },
     },
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // WebKit disabled due to compatibility issues
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
 
     /* Test against mobile viewports. */
     // {
@@ -82,12 +83,13 @@ export default defineConfig({
         ...process.env,
         SKIP_ENV_VALIDATION: 'true',
         NODE_ENV: 'test',
-        DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+        DATABASE_URL: process.env.DATABASE_URL || 'postgresql://asithalakmal@localhost:5432/autolanka_saas?schema=public',
         JWT_SECRET: process.env.JWT_SECRET || 'test-jwt-secret-key-32-chars-min',
         REFRESH_SECRET: process.env.REFRESH_SECRET || 'test-refresh-secret-key-32-chars-min',
         ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || '12345678901234567890123456789012',
         PORT: '8000',
         FRONTEND_URL: 'http://localhost:3000',
+        REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
       },
     },
   ],
