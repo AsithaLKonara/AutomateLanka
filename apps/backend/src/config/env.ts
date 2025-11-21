@@ -84,6 +84,29 @@ export function validateEnv(): EnvConfig {
     }
   }
 
+  // Skip validation in test mode
+  if (process.env.NODE_ENV === 'test' || process.env.SKIP_ENV_VALIDATION === 'true') {
+    console.warn('⚠️  Skipping environment validation (test mode)');
+    return {
+      DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+      REDIS_URL: process.env.REDIS_URL,
+      JWT_SECRET: process.env.JWT_SECRET || 'test-jwt-secret-key-32-chars-min',
+      REFRESH_SECRET: process.env.REFRESH_SECRET || 'test-refresh-secret-key-32-chars-min',
+      ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || '12345678901234567890123456789012',
+      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+      STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+      PORT: process.env.PORT || '8000',
+      NODE_ENV: process.env.NODE_ENV || 'development',
+      FRONTEND_URL: process.env.FRONTEND_URL,
+      SENTRY_DSN: process.env.SENTRY_DSN,
+      SMTP_HOST: process.env.SMTP_HOST,
+      SMTP_PORT: process.env.SMTP_PORT,
+      SMTP_USER: process.env.SMTP_USER,
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+      SMTP_FROM: process.env.SMTP_FROM,
+    };
+  }
+
   if (errors.length > 0) {
     console.error('❌ Environment variable validation failed:');
     errors.forEach(error => console.error(`  - ${error}`));

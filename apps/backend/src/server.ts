@@ -10,17 +10,21 @@ import prisma from './lib/prisma'
 // Load environment variables
 config()
 
-// Validate environment variables
-try {
-  validateEnv()
-  console.log('✅ Environment variables validated')
-} catch (error: any) {
-  console.error('❌ Environment validation failed:', error.message)
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1)
-  } else {
-    console.warn('⚠️  Continuing in development mode with invalid environment')
+// Validate environment variables (skip in test mode)
+if (process.env.NODE_ENV !== 'test' && process.env.SKIP_ENV_VALIDATION !== 'true') {
+  try {
+    validateEnv()
+    console.log('✅ Environment variables validated')
+  } catch (error: any) {
+    console.error('❌ Environment validation failed:', error.message)
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1)
+    } else {
+      console.warn('⚠️  Continuing in development mode with invalid environment')
+    }
   }
+} else {
+  console.log('⚠️  Skipping environment validation (test mode)')
 }
 
 // Initialize Sentry before anything else
