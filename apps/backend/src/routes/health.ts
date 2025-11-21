@@ -10,7 +10,14 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
 // Health check endpoints
 router.get('/', async (req, res) => {
   try {
-    const health = {
+    const health: {
+      status: string;
+      timestamp: string;
+      version: string;
+      environment: string;
+      uptime: number;
+      services: Record<string, any>;
+    } = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
@@ -26,10 +33,10 @@ router.get('/', async (req, res) => {
         status: 'healthy',
         responseTime: Date.now()
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.database = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }
@@ -42,10 +49,10 @@ router.get('/', async (req, res) => {
         status: 'healthy',
         responseTime: Date.now() - start
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.redis = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }
@@ -66,10 +73,10 @@ router.get('/', async (req, res) => {
       if (!response.ok) {
         health.status = 'unhealthy'
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.openai = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }
@@ -89,7 +96,17 @@ router.get('/', async (req, res) => {
 // Detailed health check
 router.get('/detailed', async (req, res) => {
   try {
-    const health = {
+    const health: {
+      status: string;
+      timestamp: string;
+      version: string;
+      environment: string;
+      uptime: number;
+      memory: NodeJS.MemoryUsage;
+      cpu: NodeJS.CpuUsage;
+      services: Record<string, any>;
+      metrics: Record<string, any>;
+    } = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
@@ -109,22 +126,22 @@ router.get('/detailed', async (req, res) => {
       
       // Get database stats
       const userCount = await prisma.user.count()
-      const orgCount = await prisma.organization.count()
-      const mediaCount = await prisma.media.count()
+      const workspaceCount = await prisma.workspace.count()
+      const workflowCount = await prisma.workflow.count()
       
       health.services.database = {
         status: 'healthy',
         responseTime,
         stats: {
           users: userCount,
-          organizations: orgCount,
-          media: mediaCount
+          workspaces: workspaceCount,
+          workflows: workflowCount
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.database = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }
@@ -144,10 +161,10 @@ router.get('/detailed', async (req, res) => {
         responseTime,
         memoryUsage
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.redis = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }
@@ -163,7 +180,7 @@ router.get('/detailed', async (req, res) => {
       const responseTime = Date.now() - start
       
       if (response.ok) {
-        const data = await response.json()
+        const data: any = await response.json()
         health.services.openai = {
           status: 'healthy',
           responseTime,
@@ -178,10 +195,10 @@ router.get('/detailed', async (req, res) => {
         }
         health.status = 'unhealthy'
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.openai = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }
@@ -198,10 +215,10 @@ router.get('/detailed', async (req, res) => {
         responseTime,
         endpoint: process.env.S3_ENDPOINT || 'not configured'
       }
-    } catch (error) {
+    } catch (error: any) {
       health.services.s3 = {
         status: 'unhealthy',
-        error: error.message
+        error: error?.message || 'Unknown error'
       }
       health.status = 'unhealthy'
     }

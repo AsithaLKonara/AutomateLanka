@@ -53,7 +53,7 @@ import workflowRoutes from './routes/workflows'
 // Import middleware
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger } from './middleware/requestLogger'
-import { authMiddleware } from './middleware/auth'
+import { authMiddleware } from './middleware/authMiddleware'
 import { securityService } from './services/securityService'
 import { rateLimitService } from './services/rateLimitService'
 
@@ -141,7 +141,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
 // Start server
-const PORT = process.env.PORT || 8000
+const PORT = parseInt(process.env.PORT || '8000', 10)
 const HOST = process.env.HOST || '0.0.0.0'
 
 server.listen(PORT, HOST, () => {

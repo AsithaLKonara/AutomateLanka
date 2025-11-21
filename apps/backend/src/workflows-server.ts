@@ -14,7 +14,7 @@ import aiSearchRoutes from './routes/aiSearch';
 config();
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = parseInt(process.env.PORT || '8000', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Middleware
@@ -51,7 +51,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, HOST as string, () => {
+app.listen(PORT, HOST, () => {
   console.log('🚀 N8N Workflows API Server');
   console.log('=' .repeat(50));
   console.log(`🌐 Server: http://${HOST}:${PORT}`);

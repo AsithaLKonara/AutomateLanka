@@ -1,9 +1,11 @@
-import express from 'express'
+import express, { Router, Response } from 'express'
 import Stripe from 'stripe'
 import { z } from 'zod'
 import prisma from '../lib/prisma'
+import { AuthRequest } from '../middleware/authMiddleware'
+import { asyncHandler } from '../middleware/errorHandler'
 
-const router = express.Router()
+const router = Router()
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -44,14 +46,12 @@ const createPaymentMethodSchema = z.object({
 })
 
 // Get billing information
-router.get('/info', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.get('/info', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const user = await prisma.user.findUnique({
       where: { id: userId }
@@ -109,21 +109,15 @@ router.get('/info', async (req, res) => {
       paymentMethods,
       subscriptions
     })
-  } catch (error) {
-    console.error('Error fetching billing info:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Create or update Stripe customer
-router.post('/customer', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.post('/customer', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const user = await prisma.user.findUnique({
       where: { id: userId }
@@ -191,21 +185,15 @@ router.post('/customer', async (req, res) => {
     }
 
     res.json({ customer: stripeCustomer })
-  } catch (error) {
-    console.error('Error creating/updating customer:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Create payment method
-router.post('/payment-methods', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.post('/payment-methods', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const validatedData = createPaymentMethodSchema.parse(req.body)
 
@@ -257,24 +245,15 @@ router.post('/payment-methods', async (req, res) => {
     }
 
     res.json({ paymentMethod })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors })
-    }
-    console.error('Error creating payment method:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Get payment methods
-router.get('/payment-methods', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.get('/payment-methods', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const user = await prisma.user.findUnique({
       where: { id: userId }
@@ -303,21 +282,15 @@ router.get('/payment-methods', async (req, res) => {
     })
 
     res.json({ paymentMethods: paymentMethods.data })
-  } catch (error) {
-    console.error('Error fetching payment methods:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Delete payment method
-router.delete('/payment-methods/:paymentMethodId', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.delete('/payment-methods/:paymentMethodId', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const { paymentMethodId } = req.params
 
@@ -352,21 +325,15 @@ router.delete('/payment-methods/:paymentMethodId', async (req, res) => {
     await stripe.paymentMethods.detach(paymentMethodId)
 
     res.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting payment method:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Create subscription
-router.post('/subscriptions', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.post('/subscriptions', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const validatedData = createSubscriptionSchema.parse(req.body)
 
@@ -462,24 +429,15 @@ router.post('/subscriptions', async (req, res) => {
       dbSubscription,
       clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret
     })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors })
-    }
-    console.error('Error creating subscription:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Get subscriptions
-router.get('/subscriptions', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.get('/subscriptions', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const user = await prisma.user.findUnique({
       where: { id: userId }
@@ -521,21 +479,15 @@ router.get('/subscriptions', async (req, res) => {
     )
 
     res.json({ subscriptions: subscriptionsWithStripe })
-  } catch (error) {
-    console.error('Error fetching subscriptions:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Update subscription
-router.put('/subscriptions/:subscriptionId', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.put('/subscriptions/:subscriptionId', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const { subscriptionId } = req.params
     const validatedData = updateSubscriptionSchema.parse(req.body)
@@ -589,24 +541,15 @@ router.put('/subscriptions/:subscriptionId', async (req, res) => {
       subscription: updatedSubscription,
       stripeSubscription
     })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors })
-    }
-    console.error('Error updating subscription:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Cancel subscription
-router.delete('/subscriptions/:subscriptionId', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.delete('/subscriptions/:subscriptionId', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const { subscriptionId } = req.params
 
@@ -650,21 +593,15 @@ router.delete('/subscriptions/:subscriptionId', async (req, res) => {
       subscription: stripeSubscription,
       message: 'Subscription cancelled successfully'
     })
-  } catch (error) {
-    console.error('Error cancelling subscription:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Get invoices
-router.get('/invoices', async (req, res) => {
-  try {
-    // Note: server.ts uses middleware/auth.ts which sets req.user with { id, email, name, role }
-    // But authMiddleware.ts also augments the global type, so we need to cast
-    const userId = (req.user as any)?.id || (req.user as any)?.userId
-    if (!userId) {
+router.get('/invoices', asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+    
+    const userId = req.user.userId
 
     const user = await prisma.user.findUnique({
       where: { id: userId }
@@ -693,15 +630,10 @@ router.get('/invoices', async (req, res) => {
     })
 
     res.json({ invoices: invoices.data })
-  } catch (error) {
-    console.error('Error fetching invoices:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Get pricing plans
-router.get('/pricing', async (req, res) => {
-  try {
+router.get('/pricing', asyncHandler(async (req: AuthRequest, res: Response) => {
     const prices = await stripe.prices.list({
       active: true,
       expand: ['data.product'],
@@ -730,14 +662,10 @@ router.get('/pricing', async (req, res) => {
     }, {})
 
     res.json({ plans: Object.values(plans) })
-  } catch (error) {
-    console.error('Error fetching pricing:', error)
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
+}))
 
 // Stripe webhook handler
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', express.raw({ type: 'application/json' }), asyncHandler(async (req: express.Request, res: Response) => {
   const sig = req.headers['stripe-signature']
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 
@@ -811,6 +739,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     console.error('Error processing webhook:', error)
     res.status(500).json({ error: 'Webhook processing failed' })
   }
-})
+}))
 
 export default router
