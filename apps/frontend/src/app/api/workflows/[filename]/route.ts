@@ -8,10 +8,10 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
-    const { filename } = params;
+    const { filename } = await params;
 
     const response = await fetch(`${BACKEND_URL}/api/workflows/${filename}`, {
       next: { revalidate: 60 },
