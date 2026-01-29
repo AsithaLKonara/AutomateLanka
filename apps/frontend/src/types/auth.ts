@@ -5,14 +5,30 @@ export interface User {
   role: string;
 }
 
+export interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  runsPerMonth: number;
+  maxWorkflows: number;
+  maxMembers: number;
+}
+
 export interface Workspace {
   id: string;
   name: string;
   slug: string;
   ownerId?: string;
   planId?: string;
+  plan?: Plan;
   createdAt?: string;
   updatedAt?: string;
+  _count?: {
+    memberships: number;
+    workflows: number;
+    runs: number;
+  };
+  userRole?: string;
 }
 
 export interface AuthResponse {
