@@ -42,11 +42,32 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        n8n: {
+          primary: 'var(--color--primary)',
+          'primary-shade': 'var(--color--primary--shade-1)',
+          secondary: 'var(--color--secondary)',
+          success: 'var(--color--success)',
+          warning: 'var(--color--warning)',
+          danger: 'var(--color--danger)',
+          text: 'var(--color--text)',
+          'text-shade': 'var(--color--text--shade-1)',
+          'text-tint': 'var(--color--text--tint-1)',
+          background: 'var(--color--background)',
+          'background-light': 'var(--color--background--light-3)',
+          foreground: 'var(--color--foreground)',
+        }
       },
       borderRadius: {
+        'n8n': 'var(--radius)',
+        'n8n-lg': 'var(--radius--lg)',
+        'n8n-xl': 'var(--radius--xl)',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        'n8n-light': 'var(--shadow--light)',
+        'n8n': 'var(--shadow)',
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',

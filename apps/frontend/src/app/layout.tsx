@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import N8nLayout from '@/components/layout/N8nLayout'
 
 export const metadata: Metadata = {
   title: 'AutomateLanka - Automation Intelligence Hub',
