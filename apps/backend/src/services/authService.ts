@@ -70,7 +70,7 @@ export class AuthService {
     }
 
     // Create user + workspace + membership in transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Create user
       const user = await tx.user.create({
         data: {
@@ -363,7 +363,7 @@ export class AuthService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
       .substring(0, 30);
-    
+
     const random = crypto.randomBytes(3).toString('hex');
     return `${base}-${random}`;
   }

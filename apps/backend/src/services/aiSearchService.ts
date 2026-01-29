@@ -11,7 +11,7 @@ interface EmbeddingCache {
 }
 
 export class AISearchService {
-  private embedder: Pipeline | null = null;
+  private embedder: any | null = null;
   private embeddingCache: EmbeddingCache = {};
   private initialized = false;
 
@@ -56,10 +56,10 @@ export class AISearchService {
       });
 
       const embedding = Array.from(output.data) as number[];
-      
+
       // Cache the result
       this.embeddingCache[text] = embedding;
-      
+
       return embedding;
     } catch (error) {
       console.error('Error generating embedding:', error);

@@ -151,7 +151,7 @@ export class WorkflowDatabase {
 
       // Get basic metadata
       const name = workflow.name || basename(filePath, '.json');
-      const active = workflow.active ?? workflow.meta?.status === 'active' ?? false;
+      const active = workflow.active !== undefined ? workflow.active : (workflow.meta?.status === 'active' || false);
       const description = workflow.description || workflow.meta?.description || '';
 
       // Count nodes and extract integrations
@@ -165,8 +165,8 @@ export class WorkflowDatabase {
 
       // Determine trigger type
       let triggerType = 'Manual';
-      const triggerNode = nodes.find((node: any) => 
-        node.type?.includes('trigger') || 
+      const triggerNode = nodes.find((node: any) =>
+        node.type?.includes('trigger') ||
         node.type?.includes('webhook')
       );
 
@@ -203,7 +203,7 @@ export class WorkflowDatabase {
         trigger_type: triggerType,
         complexity,
         node_count: nodeCount,
-        integrations,
+        integrations: integrations as string[],
         tags,
         created_at: workflow.createdAt || workflow.meta?.createdAt || new Date().toISOString(),
         updated_at: workflow.updatedAt || workflow.meta?.updatedAt || new Date().toISOString(),
