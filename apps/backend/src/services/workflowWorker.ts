@@ -89,18 +89,20 @@ export class WorkflowWorker {
 
         return { success: true, runId };
       } catch (error: any) {
-        console.error(`❌ Run ${runId} failed:`, error);
+        console.error(`❌ Run ${runId} failed (Attempt ${job.attemptsMade + 1}/${job.opts.attempts}):`, error);
 
-        // Update run with error
-        await prisma.run.update({
-          where: { id: runId },
-          data: {
-            status: 'failed',
-            finishedAt: new Date(),
-            errorMessage: error.message,
-            logs: error.stack || error.message,
-          },
-        });
+        // Update run with error only if it's the last attempt
+        if (job.attemptsMade + 1 >= (job.opts.attempts || 1)) {
+          await prisma.run.update({
+            where: { id: runId },
+            data: {
+              status: 'failed',
+              finishedAt: new Date(),
+              errorMessage: error.message,
+              logs: error.stack || error.message,
+            },
+          });
+        }
 
         throw error;
       }

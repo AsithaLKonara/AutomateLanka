@@ -49,6 +49,11 @@ import notificationRoutes from './routes/notifications'
 import integrationRoutes from './routes/integrations'
 import healthRoutes from './routes/health'
 import workflowRoutes from './routes/workflows'
+import saasWorkflowRoutes from './routes/saas-workflows'
+import saasIntegrationRoutes from './routes/saas-integrations'
+import runRoutes from './routes/runs'
+import saasBillingRoutes from './routes/saas-billing'
+import workspaceRoutes from './routes/workspaces'
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler'
@@ -66,8 +71,8 @@ app.use(sentryRequestHandler)
 // Middleware
 app.use(helmet())
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
+  origin: process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }))
@@ -78,8 +83,8 @@ app.use(requestLogger)
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0'
   })
@@ -98,18 +103,23 @@ app.use('/api/analytics', rateLimitService.createMiddleware('analytics'), authMi
 app.use('/api/marketplace', rateLimitService.createMiddleware('marketplace'), authMiddleware, marketplaceRoutes)
 app.use('/api/community', rateLimitService.createMiddleware('community'), authMiddleware, communityRoutes)
 app.use('/api/monitoring', authMiddleware, monitoringRoutes)
-app.use('/api/webhooks', authMiddleware, webhookRoutes)
+app.use('/api/webhooks', webhookRoutes) // Public webhooks (verified by signature if needed)
 app.use('/api/billing', authMiddleware, billingRoutes)
 app.use('/api/notifications', authMiddleware, notificationRoutes)
 app.use('/api/integrations', authMiddleware, integrationRoutes)
 app.use('/api/health', healthRoutes)
 app.use('/api/workflows', workflowRoutes) // Public workflow routes
+app.use('/api/saas-workflows', saasWorkflowRoutes)
+app.use('/api/saas-integrations', saasIntegrationRoutes)
+app.use('/api/runs', runRoutes)
+app.use('/api/workspaces', workspaceRoutes)
+app.use('/api/saas-billing', saasBillingRoutes)
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Not Found',
-    message: `Route ${req.originalUrl} not found` 
+    message: `Route ${req.originalUrl} not found`
   })
 })
 
@@ -122,10 +132,10 @@ app.use(errorHandler)
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`)
-  
+
   server.close(async () => {
     console.log('📡 HTTP server closed')
-    
+
     try {
       await prisma.$disconnect()
       console.log('🗄️ Database connection closed')
@@ -146,12 +156,12 @@ const HOST = process.env.HOST || '0.0.0.0'
 
 server.listen(PORT, HOST, () => {
   console.log('🚀 Autolanka Backend Server')
-  console.log('=' .repeat(50))
+  console.log('='.repeat(50))
   console.log(`🌐 Server running at http://${HOST}:${PORT}`)
   console.log(`📊 Health check: http://${HOST}:${PORT}/health`)
   console.log(`🔍 API Documentation: http://${HOST}:${PORT}/api`)
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log('=' .repeat(50))
+  console.log('='.repeat(50))
 })
 
 export default app

@@ -37,7 +37,7 @@ export class WorkspaceService {
     }
 
     // Create workspace and membership in transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const workspace = await tx.workspace.create({
         data: {
           name: input.name,
@@ -156,7 +156,7 @@ export class WorkspaceService {
       },
     });
 
-    return memberships.map((m) => ({
+    return memberships.map((m: any) => ({
       ...m.workspace,
       userRole: m.role,
       joinedAt: m.acceptedAt,
@@ -363,7 +363,7 @@ export class WorkspaceService {
       },
     });
 
-    return members.map((m) => ({
+    return members.map((m: any) => ({
       userId: m.user.id,
       email: m.user.email,
       name: m.user.name,
@@ -487,7 +487,7 @@ export class WorkspaceService {
     }
 
     // Transfer ownership in transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Update workspace owner
       await tx.workspace.update({
         where: { id: workspaceId },

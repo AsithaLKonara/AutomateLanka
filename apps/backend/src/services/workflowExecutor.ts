@@ -71,24 +71,30 @@ export class WorkflowExecutor {
     this.nodeExecutions++;
 
     try {
+      // Resolve parameters if they are expressions
+      const resolvedParameters = this.resolveObjectExpressions(node.parameters || {}, inputData);
+      const nodeWithResolvedParams = { ...node, parameters: resolvedParameters };
+
       // Get input from previous nodes
       const nodeInput = this.getNodeInput(node, inputData);
 
       // Execute based on node type
-      let result;
+      let result: any;
 
       if (nodeType.includes('httpRequest') || nodeType.includes('HttpRequest')) {
-        result = await this.executeHttpRequest(node, nodeInput);
+        result = await this.executeHttpRequest(nodeWithResolvedParams, nodeInput);
       } else if (nodeType.includes('webhook')) {
-        result = this.executeWebhook(node, nodeInput);
+        result = this.executeWebhook(nodeWithResolvedParams, nodeInput);
       } else if (nodeType.includes('set') || nodeType.includes('Set')) {
-        result = this.executeSet(node, nodeInput);
+        result = this.executeSet(nodeWithResolvedParams, nodeInput);
       } else if (nodeType.includes('if') || nodeType.includes('If')) {
-        result = this.executeIf(node, nodeInput);
+        result = this.executeIf(nodeWithResolvedParams, nodeInput);
       } else if (nodeType.includes('slack')) {
-        result = await this.executeSlack(node, nodeInput);
+        result = await this.executeSlack(nodeWithResolvedParams, nodeInput);
       } else if (nodeType.includes('gmail') || nodeType.includes('Gmail')) {
-        result = await this.executeGmail(node, nodeInput);
+        result = await this.executeGmail(nodeWithResolvedParams, nodeInput);
+      } else if (nodeType.includes('googleSheets') || nodeType.includes('GoogleSheets') || nodeType.includes('sheets')) {
+        result = await this.executeGoogleSheets(nodeWithResolvedParams, nodeInput);
       } else {
         // Default handler for unknown nodes
         this.log(`⚠️  Unknown node type: ${nodeType}`);
@@ -174,7 +180,7 @@ export class WorkflowExecutor {
 
     // Simple implementation - just return input
     this.log(`  Evaluating conditions`);
-    
+
     return {
       ...input,
       conditionMet: true,
@@ -195,7 +201,7 @@ export class WorkflowExecutor {
     try {
       // Import integration service
       const { integrationService } = await import('./integrationService');
-      
+
       // Get Slack integration for workspace
       const integration = await integrationService.getIntegrationForWorkflow(
         this.workspaceId,
@@ -250,7 +256,7 @@ export class WorkflowExecutor {
     try {
       // Import integration service
       const { integrationService } = await import('./integrationService');
-      
+
       // Get Google integration for workspace
       const integration = await integrationService.getIntegrationForWorkflow(
         this.workspaceId,
@@ -297,18 +303,69 @@ export class WorkflowExecutor {
   }
 
   /**
+   * Execute Google Sheets node
+   */
+  private async executeGoogleSheets(node: any, input: any): Promise<any> {
+    const params = node.parameters || {};
+    const operation = params.operation || 'append';
+    const spreadsheetId = params.spreadsheetId || '';
+    const range = params.range || 'Sheet1!A1';
+
+    this.log(`  Google Sheets operation: ${operation} on ${spreadsheetId}`);
+
+    try {
+      const { integrationService } = await import('./integrationService');
+      const integration = await integrationService.getIntegrationForWorkflow(
+        this.workspaceId,
+        'google'
+      );
+
+      if (!integration) {
+        this.log(`  ⚠️  No Google integration found - simulating`);
+        return {
+          spreadsheetId,
+          range,
+          updatedRows: 1,
+          simulated: true,
+        };
+      }
+
+      // Prepare values from input
+      const values = Array.isArray(input) ? [input] : [[JSON.stringify(input)]];
+
+      const result = await integration.provider.updateSheet(
+        integration.tokens,
+        spreadsheetId,
+        range,
+        values
+      );
+
+      this.log(`  ✅ Google Sheets updated successfully`);
+      return result;
+    } catch (error: any) {
+      this.log(`  ⚠️  Google Sheets error: ${error.message} - using simulated response`);
+      return {
+        spreadsheetId,
+        range,
+        error: error.message,
+        simulated: true,
+      };
+    }
+  }
+
+  /**
    * Get input for a node from previous nodes
    */
   private getNodeInput(node: any, workflowInput: any): any {
     // Get connections to this node
     const connections = this.workflowJson.connections || {};
-    
+
     // Find nodes that output to this node
     const inputs: any[] = [];
 
     for (const [sourceName, sourceConnections] of Object.entries(connections)) {
-      const outputs = sourceConnections as any;
-      
+      const outputs = sourceConnections as { main?: { node: string }[] };
+
       // Check main output
       if (outputs.main) {
         for (const connection of outputs.main) {
@@ -349,8 +406,8 @@ export class WorkflowExecutor {
 
       // Visit dependencies first (nodes that output to this node)
       for (const [sourceName, sourceConnections] of Object.entries(connections)) {
-        const outputs = sourceConnections as any;
-        
+        const outputs = sourceConnections as { main?: { node: string }[] };
+
         if (outputs.main) {
           for (const connection of outputs.main) {
             if (connection.node === nodeName) {
@@ -386,6 +443,79 @@ export class WorkflowExecutor {
     const logEntry = `[${timestamp}] ${message}`;
     this.logs.push(logEntry);
     console.log(logEntry);
+  }
+
+  /**
+   * Resolve expressions in an object recursively
+   */
+  private resolveObjectExpressions(obj: any, workflowInput: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.resolveObjectExpressions(item, workflowInput));
+    }
+
+    const resolved: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'string') {
+        resolved[key] = this.resolveExpression(value, workflowInput);
+      } else if (typeof value === 'object') {
+        resolved[key] = this.resolveObjectExpressions(value, workflowInput);
+      } else {
+        resolved[key] = value;
+      }
+    }
+    return resolved;
+  }
+
+  /**
+   * Resolve a single expression string
+   * Supports: {{$node["Node Name"].data["property"]}} and {{$json["property"]}}
+   */
+  private resolveExpression(expression: string, currentInput: any): any {
+    if (!expression || typeof expression !== 'string') return expression;
+
+    // Check if it's an expression
+    const match = expression.match(/\{\{(.+?)\}\}/g);
+    if (!match) return expression;
+
+    let result = expression;
+
+    for (const entry of match) {
+      const inner = entry.substring(2, entry.length - 2).trim();
+      let value = '';
+
+      try {
+        if (inner.startsWith('$json')) {
+          // Resolve from current input
+          const path = inner.replace('$json', '').replace(/^\./, '').replace(/\["(.+?)"\]/g, '.$1').replace(/\[(\d+)\]/g, '.$1');
+          value = this.getValueByPath(currentInput, path);
+        } else if (inner.startsWith('$node')) {
+          // Resolve from specific node output
+          const nodeMatch = inner.match(/\$node\["(.+?)"\]/);
+          if (nodeMatch) {
+            const nodeName = nodeMatch[1];
+            const nodeOutput = this.nodeOutputs.get(nodeName);
+            const path = inner.replace(`$node["${nodeName}"]`, '').replace(/^\./, '').replace('.data', '').replace(/^\./, '').replace(/\["(.+?)"\]/g, '.$1').replace(/\[(\d+)\]/g, '.$1');
+            value = this.getValueByPath(nodeOutput, path);
+          }
+        }
+      } catch (e) {
+        this.log(`  ⚠️  Failed to resolve expression: ${entry}`);
+      }
+
+      result = result.replace(entry, String(value ?? ''));
+    }
+
+    return result;
+  }
+
+  /**
+   * Get value from object by dot-notation path
+   */
+  private getValueByPath(obj: any, path: string): any {
+    if (!path) return obj;
+    return path.split('.').filter(Boolean).reduce((acc, part) => acc?.[part], obj);
   }
 }
 

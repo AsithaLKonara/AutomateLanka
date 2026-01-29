@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import prisma from '../lib/prisma';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2024-04-10' as any,
 });
 
 export interface CreateCheckoutSessionInput {
@@ -79,7 +79,7 @@ export class BillingService {
 
     // Get or create Stripe customer
     let customerId = existingSubscription?.stripeCustomerId;
-    
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: workspace.owner.email,
@@ -243,8 +243,8 @@ export class BillingService {
         end: periodEnd,
       },
       percentUsed: {
-        runs: workspace.plan.runsPerMonth === -1 
-          ? 0 
+        runs: workspace.plan.runsPerMonth === -1
+          ? 0
           : (usageRecord.runsCount / workspace.plan.runsPerMonth) * 100,
       },
     };
@@ -379,13 +379,14 @@ export class BillingService {
    */
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const customerId = subscription.customer as string;
-    const customer = await stripe.customers.retrieve(customerId);
-    
-    if (customer.deleted) {
+    const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Response<Stripe.Customer | Stripe.DeletedCustomer>;
+
+    if ('deleted' in customer && customer.deleted) {
       return;
     }
 
-    const workspaceId = customer.metadata?.workspaceId;
+    const stripeCustomer = customer as Stripe.Customer;
+    const workspaceId = stripeCustomer.metadata?.workspaceId;
     if (!workspaceId) {
       console.error('Missing workspaceId in customer metadata');
       return;
@@ -393,7 +394,7 @@ export class BillingService {
 
     // Get plan from subscription
     const priceId = subscription.items.data[0]?.price.id;
-    
+
     // Upsert subscription record
     await prisma.subscription.upsert({
       where: { workspaceId },
@@ -425,13 +426,14 @@ export class BillingService {
    */
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const customerId = subscription.customer as string;
-    const customer = await stripe.customers.retrieve(customerId);
-    
-    if (customer.deleted) {
+    const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Response<Stripe.Customer | Stripe.DeletedCustomer>;
+
+    if ('deleted' in customer && customer.deleted) {
       return;
     }
 
-    const workspaceId = customer.metadata?.workspaceId;
+    const stripeCustomer = customer as Stripe.Customer;
+    const workspaceId = stripeCustomer.metadata?.workspaceId;
     if (!workspaceId) {
       return;
     }
@@ -442,7 +444,7 @@ export class BillingService {
     });
 
     // Downgrade to free plan
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.workspace.update({
         where: { id: workspaceId },
         data: { planId: freePlan?.id },
