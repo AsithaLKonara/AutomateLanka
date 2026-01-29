@@ -123,12 +123,12 @@ router.get('/detailed', async (req, res) => {
       const start = Date.now()
       await prisma.$queryRaw`SELECT 1`
       const responseTime = Date.now() - start
-      
+
       // Get database stats
       const userCount = await prisma.user.count()
       const workspaceCount = await prisma.workspace.count()
       const workflowCount = await prisma.workflow.count()
-      
+
       health.services.database = {
         status: 'healthy',
         responseTime,
@@ -151,11 +151,11 @@ router.get('/detailed', async (req, res) => {
       const start = Date.now()
       await redis.ping()
       const responseTime = Date.now() - start
-      
+
       // Get Redis info
       const info = await redis.info('memory')
       const memoryUsage = info.match(/used_memory_human:([^\r\n]+)/)?.[1] || 'unknown'
-      
+
       health.services.redis = {
         status: 'healthy',
         responseTime,
@@ -178,7 +178,7 @@ router.get('/detailed', async (req, res) => {
         }
       })
       const responseTime = Date.now() - start
-      
+
       if (response.ok) {
         const data: any = await response.json()
         health.services.openai = {
@@ -209,7 +209,7 @@ router.get('/detailed', async (req, res) => {
       // This would require AWS SDK setup
       // For now, we'll simulate the check
       const responseTime = Date.now() - start
-      
+
       health.services.s3 = {
         status: 'healthy',
         responseTime,
@@ -253,7 +253,7 @@ router.get('/ready', async (req, res) => {
     ])
 
     const allReady = checks.every(check => check.status === 'fulfilled')
-    
+
     if (allReady) {
       res.status(200).json({
         status: 'ready',
@@ -303,7 +303,7 @@ router.get('/live', async (req, res) => {
 // Metrics endpoint
 router.get('/metrics', async (req, res) => {
   try {
-    const metrics = {
+    const metrics: any = {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
@@ -334,7 +334,7 @@ router.get('/metrics', async (req, res) => {
     } catch (error) {
       metrics.database = {
         status: 'unhealthy',
-        error: error.message
+        error: (error as any).message
       }
     }
 
@@ -349,7 +349,7 @@ router.get('/metrics', async (req, res) => {
     } catch (error) {
       metrics.redis = {
         status: 'unhealthy',
-        error: error.message
+        error: (error as any).message
       }
     }
 
@@ -368,16 +368,16 @@ router.get('/database', async (req, res) => {
     const start = Date.now()
     await prisma.$queryRaw`SELECT 1`
     const responseTime = Date.now() - start
-    
+
     res.json({
       status: 'healthy',
       responseTime,
       timestamp: new Date().toISOString()
     })
-  } catch (error) {
+  } catch (error: any) {
     res.status(503).json({
       status: 'unhealthy',
-      error: error.message,
+      error: (error as any).message,
       timestamp: new Date().toISOString()
     })
   }
@@ -388,16 +388,16 @@ router.get('/redis', async (req, res) => {
     const start = Date.now()
     await redis.ping()
     const responseTime = Date.now() - start
-    
+
     res.json({
       status: 'healthy',
       responseTime,
       timestamp: new Date().toISOString()
     })
-  } catch (error) {
+  } catch (error: any) {
     res.status(503).json({
       status: 'unhealthy',
-      error: error.message,
+      error: (error as any).message,
       timestamp: new Date().toISOString()
     })
   }
@@ -412,7 +412,7 @@ router.get('/openai', async (req, res) => {
       }
     })
     const responseTime = Date.now() - start
-    
+
     if (response.ok) {
       res.json({
         status: 'healthy',
@@ -429,10 +429,10 @@ router.get('/openai', async (req, res) => {
         timestamp: new Date().toISOString()
       })
     }
-  } catch (error) {
+  } catch (error: any) {
     res.status(503).json({
       status: 'unhealthy',
-      error: error.message,
+      error: (error as any).message,
       timestamp: new Date().toISOString()
     })
   }
