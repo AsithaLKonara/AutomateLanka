@@ -76,10 +76,14 @@ async function main() {
   ];
 
   for (const plan of plans) {
+    const data = {
+      ...plan,
+      features: JSON.stringify(plan.features),
+    };
     await prisma.plan.upsert({
       where: { slug: plan.slug },
-      update: plan,
-      create: plan,
+      update: data,
+      create: data,
     });
     console.log(`✓ Created/Updated plan: ${plan.name}`);
   }

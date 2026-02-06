@@ -236,11 +236,13 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
+import { checkMemberLimit } from '../middleware/planLimitsMiddleware';
+
 /**
  * POST /api/workspaces/:id/invite
  * Invite member to workspace
  */
-router.post('/:id/invite', async (req: AuthRequest, res: Response) => {
+router.post('/:id/invite', checkMemberLimit, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
