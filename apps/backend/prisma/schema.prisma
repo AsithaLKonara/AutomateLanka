@@ -3,12 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  // For local development with SQLite, uncomment below and comment PostgreSQL:
-  // Note: SQLite requires schema modifications (Json -> String, arrays -> JSON strings)
-  // provider = "sqlite"
-  // url      = "file:./dev.db"
 }
 
 // ============ USER & AUTH ============
@@ -22,6 +18,9 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   lastLoginAt  DateTime? @map("last_login_at")
+  verificationToken String? @map("verification_token")
+  resetToken        String? @map("reset_token")
+  resetTokenExpires DateTime? @map("reset_token_expires")
 
   ownedWorkspaces Workspace[]    @relation("WorkspaceOwner")
   memberships     Membership[]
@@ -92,12 +91,12 @@ model Workflow {
   workspaceId  String   @map("workspace_id")
   name         String
   filename     String?
-  json         Json // Full n8n workflow definition
+  json         String
   active       Boolean  @default(false)
   public       Boolean  @default(false)
-  tags         String[]
+  tags         String?
   nodesCount   Int      @default(0) @map("nodes_count")
-  integrations String[]
+  integrations String?
   category     String?
   createdBy    String   @map("created_by")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -123,7 +122,7 @@ model WorkflowVersion {
   id         String   @id @default(uuid())
   workflowId String   @map("workflow_id")
   version    Int
-  json       Json
+  json       String
   note       String?
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -144,8 +143,8 @@ model Run {
   startedAt      DateTime? @map("started_at")
   finishedAt     DateTime? @map("finished_at")
   durationMs     Int?      @map("duration_ms")
-  inputData      Json?     @map("input_data")
-  outputData     Json?     @map("output_data")
+  inputData      String?     @map("input_data")
+  outputData     String?     @map("output_data")
   errorMessage   String?   @map("error_message")
   logs           String?
   nodeExecutions Int       @default(0) @map("node_executions")
@@ -171,7 +170,7 @@ model Integration {
   type                 String // slack, gmail, sheets, etc.
   name                 String?
   encryptedCredentials String    @map("encrypted_credentials")
-  metadata             Json?
+  metadata             String?
   connectedBy          String    @map("connected_by")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
@@ -191,12 +190,12 @@ model Plan {
   id           String   @id @default(uuid())
   name         String
   slug         String   @unique
-  priceMonthly Decimal  @map("price_monthly") @db.Decimal(10, 2)
-  priceYearly  Decimal  @map("price_yearly") @db.Decimal(10, 2)
+  priceMonthly Float    @map("price_monthly")
+  priceYearly  Float    @map("price_yearly")
   runsPerMonth Int      @map("runs_per_month")
   maxWorkflows Int      @map("max_workflows")
   maxMembers   Int      @map("max_members")
-  features     Json?
+  features     String?
   createdAt    DateTime @default(now()) @map("created_at")
 
   workspaces    Workspace[]
@@ -227,8 +226,8 @@ model Subscription {
 model UsageRecord {
   id             String   @id @default(uuid())
   workspaceId    String   @map("workspace_id")
-  periodStart    DateTime @map("period_start") @db.Date
-  periodEnd      DateTime @map("period_end") @db.Date
+  periodStart    DateTime @map("period_start")
+  periodEnd      DateTime @map("period_end")
   runsCount      Int      @default(0) @map("runs_count")
   nodeExecutions Int      @default(0) @map("node_executions")
   apiCalls       Int      @default(0) @map("api_calls")
@@ -248,7 +247,7 @@ model ApiKey {
   workspaceId String    @map("workspace_id")
   keyHash     String    @map("key_hash")
   name        String?
-  scopes      String[]
+  scopes      String?
   lastUsedAt  DateTime? @map("last_used_at")
   expiresAt   DateTime? @map("expires_at")
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -268,7 +267,7 @@ model AuditLog {
   action      String // login, logout, workspace_create, workflow_execute, billing_change, etc.
   resource    String? // workspace, workflow, subscription, etc.
   resourceId  String?  @map("resource_id")
-  details     Json? // Additional context
+  details     String? // Additional context
   ipAddress   String?  @map("ip_address")
   userAgent   String?  @map("user_agent")
   createdAt   DateTime @default(now()) @map("created_at")

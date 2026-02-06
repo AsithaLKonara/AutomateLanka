@@ -1,6 +1,7 @@
 import { hashPassword, comparePassword, validatePasswordStrength, generateResetToken, generateVerificationToken } from '../utils/password';
 import { generateTokenPair, verifyAccessToken, TokenPayload, generateAccessToken } from '../utils/jwt';
 import { auditService } from './auditService';
+import { emailService } from './emailService';
 import prisma from '../lib/prisma';
 import crypto from 'crypto';
 
@@ -71,13 +72,17 @@ export class AuthService {
 
     // Create user + workspace + membership in transaction
     const result = await prisma.$transaction(async (tx: any) => {
+      // Generate verification token
+      const verificationToken = generateVerificationToken();
+
       // Create user
       const user = await tx.user.create({
         data: {
           email: input.email.toLowerCase(),
           passwordHash,
           name: input.name,
-          isVerified: false, // Will be true after email verification
+          isVerified: false,
+          verificationToken,
         },
       });
 
@@ -126,6 +131,13 @@ export class AuthService {
 
     // Audit log: user registration
     await auditService.logAuth('register', result.user.id);
+
+    // Send verification email (don't await - non-blocking)
+    emailService.sendVerificationEmail(
+      result.user.email,
+      result.user.name || result.user.email,
+      result.user.verificationToken!
+    );
 
     return {
       user: {
@@ -296,9 +308,23 @@ export class AuthService {
    * Verify email with token
    */
   async verifyEmail(token: string): Promise<void> {
-    // In a real implementation, you'd store verification tokens in DB
-    // For now, this is a placeholder
-    throw new Error('Email verification not yet implemented');
+    const user = await prisma.user.findFirst({
+      where: { verificationToken: token },
+    });
+
+    if (!user) {
+      throw new Error('Invalid or expired verification token');
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        verificationToken: null,
+      },
+    });
+
+    await auditService.logAuth('email_verify', user.id);
   }
 
   /**
@@ -310,18 +336,25 @@ export class AuthService {
     });
 
     if (!user) {
-      // Don't reveal if email exists or not (security best practice)
-      // Still return success but don't send email
+      // Don't reveal if email exists or not
       return { token: '' };
     }
 
     // Generate reset token
     const resetToken = generateResetToken();
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
 
-    // In a real implementation:
-    // 1. Store token in database with expiry (1 hour)
-    // 2. Send email with reset link
-    // For now, return token (in production, send via email only)
+    // Store token in database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken,
+        resetTokenExpires,
+      },
+    });
+
+    // Send email
+    await emailService.sendPasswordResetEmail(user.email, resetToken);
 
     return { token: resetToken };
   }
@@ -336,15 +369,38 @@ export class AuthService {
       throw new Error(passwordValidation.errors.join(', '));
     }
 
-    // In a real implementation:
-    // 1. Verify token exists and not expired
-    // 2. Get user from token
-    // 3. Hash new password
-    // 4. Update user password
-    // 5. Delete token
-    // 6. Revoke all refresh tokens (force re-login)
+    // Verify token exists and not expired
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpires: { gt: new Date() },
+      },
+    });
 
-    throw new Error('Password reset not yet implemented');
+    if (!user) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    // Hash new password
+    const passwordHash = await hashPassword(newPassword);
+
+    await prisma.$transaction([
+      // Update user password
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          resetToken: null,
+          resetTokenExpires: null,
+        },
+      }),
+      // Revoke all refresh tokens (force re-login)
+      prisma.refreshToken.deleteMany({
+        where: { userId: user.id },
+      }),
+    ]);
+
+    await auditService.logAuth('password_reset', user.id);
   }
 
   /**
