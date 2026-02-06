@@ -1,8 +1,8 @@
 export function AnimatedBackground({ variant = 'default' }: { variant?: 'default' | 'purple' | 'blue' }) {
   const gradients = {
-    default: 'from-blue-50 via-purple-50 to-pink-50',
-    purple: 'from-purple-50 via-blue-50 to-pink-50',
-    blue: 'from-blue-50 via-indigo-50 to-purple-50'
+    default: 'from-[#0e0918] via-[#1a1625] to-[#0e0918]',
+    purple: 'from-[#1a1625] via-[#0e0918] to-[#1a1625]',
+    blue: 'from-[#0e0918] via-[#0e0918] to-[#1a1625]'
   }
 
   const orbs = {

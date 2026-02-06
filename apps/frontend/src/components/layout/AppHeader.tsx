@@ -16,7 +16,7 @@ export default function AppHeader() {
         .join(' ');
 
     return (
-        <header className="h-14 bg-white border-b border-n8n-foreground flex items-center justify-between px-6 z-30">
+        <header className="h-14 bg-n8n-foreground border-b border-white/5 flex items-center justify-between px-6 z-30">
             {/* Left side: Breadcrumbs */}
             <div className="flex items-center gap-2 text-sm">
                 <span className="text-n8n-text-tint">Workflows</span>

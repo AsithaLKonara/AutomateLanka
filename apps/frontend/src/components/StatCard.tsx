@@ -12,12 +12,12 @@ interface StatCardProps {
   }
 }
 
-export function StatCard({ 
-  label, 
-  value, 
-  icon: Icon, 
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
   color = 'blue',
-  trend 
+  trend
 }: StatCardProps) {
   const colorClasses = {
     blue: 'from-blue-500 to-blue-600',
@@ -35,9 +35,9 @@ export function StatCard({
       <div className="text-3xl font-bold mb-1">
         {typeof value === 'number' ? value.toLocaleString() : value}
       </div>
-      <div className="text-sm text-gray-600">{label}</div>
+      <div className="text-sm text-white/50">{label}</div>
       {trend && (
-        <div className={`text-xs font-semibold mt-2 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+        <div className={`text-xs font-semibold mt-2 ${trend.isPositive ? 'text-green-400' : 'text-red-400'}`}>
           {trend.isPositive ? '↑' : '↓'} {trend.value}%
         </div>
       )}

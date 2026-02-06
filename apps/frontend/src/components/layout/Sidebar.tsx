@@ -101,7 +101,7 @@ export default function Sidebar() {
             </div>
 
             {/* Bottom Area */}
-            <div className="flex flex-col gap-1 pt-4 border-t border-n8n-background">
+            <div className="flex flex-col gap-1 pt-4 border-t border-white/5">
                 {bottomItems.map(item => (
                     <SidebarItem
                         key={item.href}
@@ -110,7 +110,7 @@ export default function Sidebar() {
                     />
                 ))}
 
-                <div className="mt-4 flex items-center gap-3 px-3 py-2 border-t border-n8n-background pt-4">
+                <div className="mt-4 flex items-center gap-3 px-3 py-2 border-t border-white/5 pt-4">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
                         {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                     </div>

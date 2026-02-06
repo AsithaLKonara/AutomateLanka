@@ -99,7 +99,7 @@ export default function N8nWorkflowCard({ workflow, onDownload }: N8nWorkflowCar
             </div>
 
             {/* Footer Actions */}
-            <div className="px-4 py-3 border-t border-n8n-background flex items-center justify-between bg-gray-50/50">
+            <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between bg-black/10">
                 <div className="flex items-center gap-3 text-[10px] text-n8n-text-tint font-bold uppercase tracking-wider">
                     <div className="flex items-center gap-1">
                         <span className="text-n8n-text-shade">{workflow.node_count}</span>

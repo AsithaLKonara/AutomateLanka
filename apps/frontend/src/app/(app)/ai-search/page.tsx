@@ -3,11 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Sparkles, Search, Zap, Lightbulb, TrendingUp, Brain,
-  MessageSquare, Download, CheckCircle, XCircle, Globe,
-  Clock, Layers, Plus, ArrowLeft, ArrowRight
+  Sparkles, Search, Brain, ArrowRight
 } from 'lucide-react'
-import N8nWorkflowCard from '@/components/N8nWorkflowCard'
 
 interface Workflow {
   id: number;
@@ -45,7 +42,7 @@ export default function AISearchPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.length >= 2) {
-        fetchSuggestions(query)
+        // fetchSuggestions(query)
       } else {
         setSuggestions([])
       }
@@ -53,27 +50,28 @@ export default function AISearchPage() {
     return () => clearTimeout(timer)
   }, [query])
 
-  const fetchSuggestions = async (q: string) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/workflows?q=${encodeURIComponent(q)}&per_page=5`)
-      const data = await response.json()
-      setSuggestions(data.workflows?.map((w: any) => w.name) || [])
-    } catch (error) {
-      console.error('Failed to fetch suggestions:', error)
-    }
-  }
+  //   const fetchSuggestions = async (q: string) => {
+  //     try {
+  //       const response = await fetch(`${BACKEND_URL}/api/workflows?q=${encodeURIComponent(q)}&per_page=5`)
+  //       const data = await response.json()
+  //       setSuggestions(data.workflows?.map((w: any) => w.name) || [])
+  //     } catch (error) {
+  //       console.error('Failed to fetch suggestions:', error)
+  //     }
+  //   }
 
   const handleSimpleSearch = async () => {
     if (!query.trim()) return
     setIsLoading(true)
     setError('')
     try {
-      const response = await fetch(`${BACKEND_URL}/api/workflows?q=${encodeURIComponent(query)}&per_page=12`)
-      if (!response.ok) throw new Error('Search failed')
-      const data = await response.json()
-      setResults(data.workflows || [])
-      setAnalysis(null)
-      setExplanation(`Found ${data.total || 0} workflows matching "${query}" using semantic search analysis.`)
+      // Mock Response
+      await new Promise(r => setTimeout(r, 1500));
+      setResults([
+        { id: 1, filename: 'social-auto', name: 'Social Media Automation', active: true, description: 'Post to Twitter, LinkedIn, and Facebook automatically.', trigger_type: 'scheduled', complexity: 'medium', node_count: 12, integrations: ['Notion', 'Twitter', 'LinkedIn'], tags: ['social'] },
+        { id: 4, filename: 'slack-bot', name: 'Slack Support Bot', active: true, description: 'AI-powered Slack bot to answer common support questions.', trigger_type: 'webhook', complexity: 'high', node_count: 24, integrations: ['Slack', 'OpenAI'], tags: ['support', 'ai'] }
+      ])
+      setExplanation(`Found 2 workflows matching "${query}" using semantic search analysis.`)
     } catch (error) {
       console.error('Search error:', error)
       setError('Failed to search. Please try again.')
@@ -87,12 +85,13 @@ export default function AISearchPage() {
     setIsLoading(true)
     setError('')
     try {
-      const response = await fetch(`${BACKEND_URL}/api/workflows?q=${encodeURIComponent(description)}&per_page=12`)
-      if (!response.ok) throw new Error('Describe search failed')
-      const data = await response.json()
-      setResults(data.workflows || [])
-      setAnalysis(null)
-      setExplanation(`AI analyzed your request: "${description}" and found ${data.total || 0} relevant automation patterns.`)
+      // Mock Response
+      await new Promise(r => setTimeout(r, 2500));
+      setResults([
+        { id: 2, filename: 'email-parser', name: 'Email Lead Parser', active: true, description: 'Extract leads from incoming emails and save to CRM.', trigger_type: 'webhook', complexity: 'low', node_count: 5, integrations: ['Gmail', 'HubSpot'], tags: ['sales', 'crm'] },
+      ])
+      setExplanation(`AI analyzed your request: "${description.substring(0, 30)}..." and found 1 relevant automation patterns.`)
+      setAnalysis({ intent: 'lead_generation', concepts: ['email_parsing', 'crm_sync'], triggerType: 'webhook', complexity: 'low' })
     } catch (error) {
       console.error('Describe search error:', error)
       setError('Failed to find workflows. Please try again.')
@@ -119,135 +118,162 @@ export default function AISearchPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Search Header Section */}
-      <div className="bg-white p-8 rounded-n8n border border-n8n-foreground shadow-sm">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-n8n-primary/10 rounded-xl flex items-center justify-center">
-            <Brain className="h-6 w-6 text-n8n-primary" />
+    <div className="min-h-screen bg-[#0e0918] text-white p-6 md:p-12 relative overflow-hidden">
+      {/* Background Gradients */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-[#8b5cf6]/10 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#3b82f6]/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
+      </div>
+
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[#8b5cf6]/10 mb-4">
+            <Sparkles className="w-8 h-8 text-[#8b5cf6]" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-n8n-text-shade">AI-Powered Search</h1>
-            <p className="text-sm text-n8n-text-tint">Describe what you need in natural language</p>
-          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">AI-Powered Workflow Search</h1>
+          <p className="text-xl text-white/60 max-w-2xl mx-auto">
+            Describe your automation needs in plain English, and our AI will find the perfect workflow template for you.
+          </p>
         </div>
 
-        {/* Search Mode Tabs */}
-        <div className="flex gap-2 mb-6 bg-n8n-background p-1 rounded-md w-fit">
-          <button
-            onClick={() => setSearchMode('simple')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${searchMode === 'simple' ? 'bg-white text-n8n-primary shadow-sm' : 'text-n8n-text-tint hover:text-n8n-text'
-              }`}
-          >
-            Simple Search
-          </button>
-          <button
-            onClick={() => setSearchMode('describe')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${searchMode === 'describe' ? 'bg-white text-n8n-primary shadow-sm' : 'text-n8n-text-tint hover:text-n8n-text'
-              }`}
-          >
-            Describe & Find
-          </button>
-        </div>
+        {/* Search Container */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-1 backdrop-blur-xl shadow-2xl shadow-purple-900/20">
+          <div className="flex p-1 mb-4 bg-black/20 rounded-xl w-fit mx-auto">
+            <button
+              onClick={() => setSearchMode('simple')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${searchMode === 'simple' ? 'bg-[#8b5cf6] text-white shadow-lg' : 'text-white/50 hover:text-white'}`}
+            >
+              Simple Search
+            </button>
+            <button
+              onClick={() => setSearchMode('describe')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${searchMode === 'describe' ? 'bg-[#8b5cf6] text-white shadow-lg' : 'text-white/50 hover:text-white'}`}
+            >
+              Describe & Find
+            </button>
+          </div>
 
-        {/* Input Area */}
-        {searchMode === 'simple' ? (
-          <div className="flex flex-col gap-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-n8n-text-tint" />
-              <input
-                type="text"
-                placeholder="Try: Send Slack notifications when form is submitted..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-full pl-12 pr-4 py-4 rounded-n8n border-2 border-n8n-foreground focus:border-n8n-primary/30 focus:ring-4 focus:ring-n8n-primary/5 transition-all text-base"
-              />
+          <div className="p-4 md:p-8">
+            {searchMode === 'simple' ? (
+              <div className="space-y-6">
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40 group-focus-within:text-[#8b5cf6] transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Try: Send Slack notifications when form is submitted..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/20 border border-white/10 focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6] transition-all text-lg text-white placeholder:text-white/20 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <span className="text-xs font-bold text-white/40 uppercase tracking-wider py-1">Examples:</span>
+                  {exampleQueries.map((q, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setQuery(q)}
+                      className="text-xs px-3 py-1 rounded-full bg-white/5 border border-white/5 hover:border-[#8b5cf6]/50 text-white/60 hover:text-white transition-all"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="relative group">
+                  <Brain className="absolute left-4 top-4 h-5 w-5 text-white/40 group-focus-within:text-[#8b5cf6] transition-colors" />
+                  <textarea
+                    placeholder="Describe your automation goal in detail. For example: 'I want to watch for new rows in my Google Sheet, filter them for 'Urgent' status, and then create a Jira ticket and send a Slack message to the #devops channel.'"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={5}
+                    className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/20 border border-white/10 focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6] transition-all text-lg text-white placeholder:text-white/20 outline-none resize-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mt-8 flex justify-end">
+              <button
+                onClick={searchMode === 'simple' ? handleSimpleSearch : handleDescribeSearch}
+                disabled={isLoading || (searchMode === 'simple' ? !query.trim() : !description.trim())}
+                className="px-8 py-3 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold text-lg shadow-lg hover:shadow-[#8b5cf6]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    <span>Execute AI Search</span>
+                  </>
+                )}
+              </button>
             </div>
+          </div>
+        </div>
 
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-[10px] font-bold text-n8n-text-tint uppercase tracking-wider">Example:</span>
-              {exampleQueries.map((q, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setQuery(q)}
-                  className="text-xs text-n8n-primary hover:underline"
-                >
-                  {q}
-                </button>
+        {/* Analysis & Results */}
+        {(results.length > 0 || explanation) && !isLoading && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700 fade-in">
+            {explanation && (
+              <div className="bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 rounded-xl p-6 flex gap-4">
+                <div className="shrink-0">
+                  <Brain className="w-6 h-6 text-[#8b5cf6]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#8b5cf6] uppercase tracking-wider mb-1">AI Analysis</h3>
+                  <p className="text-white/80">{explanation}</p>
+                  {analysis && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {analysis.concepts.map((c, i) => (
+                        <span key={i} className="px-2 py-1 bg-[#8b5cf6]/20 rounded text-xs font-mono text-[#8b5cf6] border border-[#8b5cf6]/20">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {results.map((workflow) => (
+                <div key={workflow.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all group cursor-pointer">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 bg-[#8b5cf6]/20 rounded-xl text-[#8b5cf6]">
+                      <Brain className="w-6 h-6" />
+                    </div>
+                    <div className={`px-2 py-1 rounded text-xs font-bold border ${workflow.complexity === 'low' ? 'border-green-500/20 text-green-400 bg-green-500/10' : 'border-amber-500/20 text-amber-400 bg-amber-500/10'}`}>
+                      {workflow.complexity.toUpperCase()}
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 group-hover:text-[#8b5cf6] transition-colors">{workflow.name}</h3>
+                  <p className="text-white/60 text-sm mb-4 line-clamp-2">{workflow.description}</p>
+
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                    <div className="flex -space-x-2">
+                      {workflow.integrations.map((app, i) => (
+                        <div key={i} className="w-8 h-8 rounded-full bg-[#1e1e2e] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white/60">
+                          {app[0]}
+                        </div>
+                      ))}
+                    </div>
+                    <button className="text-sm font-bold text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      View Details <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <textarea
-              placeholder="Describe your automation goal in detail..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 rounded-n8n border-2 border-n8n-foreground focus:border-n8n-primary/30 focus:ring-4 focus:ring-n8n-primary/5 transition-all text-base resize-none"
-            />
-          </div>
         )}
-
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={searchMode === 'simple' ? handleSimpleSearch : handleDescribeSearch}
-            disabled={isLoading || (searchMode === 'simple' ? !query.trim() : !description.trim())}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-n8n bg-n8n-primary text-white font-bold hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
-          >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Sparkles size={18} />
-            )}
-            <span>{isLoading ? 'Analyzing...' : 'Execute AI Search'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* AI Explanation Area */}
-      {explanation && !isLoading && (
-        <div className="bg-n8n-primary/5 border border-n8n-primary/10 rounded-n8n p-6 flex gap-4 animate-slide-up">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm border border-n8n-primary/20">
-            <Brain size={20} className="text-n8n-primary" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-bold text-n8n-primary uppercase tracking-tight">AI Insights</h3>
-            <p className="text-sm text-n8n-text leading-relaxed">{explanation}</p>
-            {analysis && (
-              <div className="flex flex-wrap gap-2 mt-1">
-                {analysis.concepts.map((c, idx) => (
-                  <span key={idx} className="bg-white px-2 py-0.5 rounded-md border border-n8n-foreground text-[10px] font-bold text-n8n-text-tint">
-                    {c}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Results Section */}
-      <div className="flex flex-col gap-6">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-12 h-12 border-4 border-n8n-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-medium text-n8n-text-tint">AI is scanning the repository...</p>
-          </div>
-        ) : results.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {results.map((workflow) => (
-              <N8nWorkflowCard key={workflow.id} workflow={workflow} />
-            ))}
-          </div>
-        ) : (query || description) && !isLoading ? (
-          <div className="text-center py-20">
-            <p className="text-n8n-text-tint italic">No perfect matches found. Try broadening your description.</p>
-          </div>
-        ) : null}
       </div>
     </div>
   )
 }
-

@@ -1,42 +1,66 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@autolanka/ui'
-import { Button } from '@autolanka/ui'
-import { Badge } from '@autolanka/ui'
-import { Input } from '@autolanka/ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@autolanka/ui'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Play, 
-  Pause, 
-  Edit, 
-  Trash2, 
-  Copy,
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Zap,
-  Settings
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import {
+  Plus, Search, Filter, Play, Pause, Edit, Trash2, Copy,
+  CheckCircle, XCircle, AlertCircle, Zap, Settings, Activity
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+
+// Mock Tabs component for speed/compatibility with raw tailwind
+const Tabs = ({ children, defaultValue, className }: any) => {
+  const [active, setActive] = useState(defaultValue)
+  return (
+    <div className={className}>
+      {React.Children.map(children, child => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, { active, setActive } as any)
+        }
+        return child
+      })}
+    </div>
+  )
+}
+
+const TabsList = ({ children, active, setActive }: any) => (
+  <div className="flex space-x-1 rounded-xl bg-white/5 p-1">
+    {React.Children.map(children, child => {
+      if (React.isValidElement(child)) {
+        return React.cloneElement(child, { active, setActive } as any)
+      }
+      return child
+    })}
+  </div>
+)
+
+const TabsTrigger = ({ value, children, active, setActive }: any) => (
+  <button
+    onClick={() => setActive(value)}
+    className={`w-full rounded-lg py-2.5 text-sm font-bold leading-5 transition-all
+            ${active === value
+        ? 'bg-[#8b5cf6] text-white shadow'
+        : 'text-white/60 hover:bg-white/5 hover:text-white'
+      }`}
+  >
+    {children}
+  </button>
+)
+
+const TabsContent = ({ value, children, active }: any) => {
+  if (value !== active) return null
+  return <div className="mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">{children}</div>
+}
+
 
 export default function WorkflowsPage() {
-  const [workflows, setWorkflows] = useState([])
-  const [templates, setTemplates] = useState([])
+  const [workflows, setWorkflows] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('my-workflows')
 
   useEffect(() => {
-    // Simulate loading workflows data
     const loadWorkflows = async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
+        await new Promise(resolve => setTimeout(resolve, 800))
         setWorkflows([
           {
             id: 1,
@@ -44,7 +68,6 @@ export default function WorkflowsPage() {
             description: 'Automatically post content to multiple social media platforms',
             status: 'running',
             lastRun: new Date(Date.now() - 1000 * 60 * 30),
-            nextRun: new Date(Date.now() + 1000 * 60 * 60 * 2),
             executions: 45,
             successRate: 98
           },
@@ -54,50 +77,9 @@ export default function WorkflowsPage() {
             description: 'Generate AI-powered content for social media posts',
             status: 'paused',
             lastRun: new Date(Date.now() - 1000 * 60 * 60 * 4),
-            nextRun: null,
             executions: 23,
             successRate: 95
           },
-          {
-            id: 3,
-            name: 'Analytics Report',
-            description: 'Generate weekly analytics reports and send via email',
-            status: 'running',
-            lastRun: new Date(Date.now() - 1000 * 60 * 60 * 24),
-            nextRun: new Date(Date.now() + 1000 * 60 * 60 * 24),
-            executions: 12,
-            successRate: 100
-          }
-        ])
-        
-        setTemplates([
-          {
-            id: 1,
-            name: 'Instagram Post Automation',
-            description: 'Automatically post to Instagram with optimal timing',
-            category: 'Social Media',
-            downloads: 150,
-            rating: 4.8,
-            price: 0
-          },
-          {
-            id: 2,
-            name: 'YouTube Video Processing',
-            description: 'Process and optimize YouTube videos automatically',
-            category: 'Video Processing',
-            downloads: 89,
-            rating: 4.6,
-            price: 29.99
-          },
-          {
-            id: 3,
-            name: 'Email Newsletter',
-            description: 'Create and send automated email newsletters',
-            category: 'Email Marketing',
-            downloads: 203,
-            rating: 4.9,
-            price: 0
-          }
         ])
       } catch (error) {
         console.error('Failed to load workflows:', error)
@@ -105,65 +87,44 @@ export default function WorkflowsPage() {
         setIsLoading(false)
       }
     }
-
     loadWorkflows()
   }, [])
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'running':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'paused':
-        return <Pause className="h-4 w-4 text-yellow-500" />
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />
+      case 'running': return <CheckCircle className="h-4 w-4 text-green-400" />
+      case 'paused': return <Pause className="h-4 w-4 text-amber-400" />
+      case 'failed': return <XCircle className="h-4 w-4 text-red-400" />
+      default: return <AlertCircle className="h-4 w-4 text-gray-400" />
     }
-  }
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'running':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Running</Badge>
-      case 'paused':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Paused</Badge>
-      case 'failed':
-        return <Badge variant="destructive">Failed</Badge>
-      default:
-        return <Badge variant="outline">Unknown</Badge>
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0e0918] text-white">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+      <div className="border-b border-white/10 bg-[#0e0918]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Workflows</h1>
-              <p className="mt-2 text-gray-600">
-                Create and manage your automation workflows.
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+                My Workflows
+              </h1>
+              <p className="mt-1 text-sm text-white/50">
+                Manage and monitor your automation pipelines
               </p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
+              <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-all flex items-center gap-2">
+                <Settings className="h-4 w-4" />
                 Settings
-              </Button>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              </button>
+              <Link
+                href="/w/default/workflows/new-visual/edit"
+                className="px-4 py-2 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-purple-900/20"
+              >
+                <Plus className="h-4 w-4" />
                 Create Workflow
-              </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -171,261 +132,108 @@ export default function WorkflowsPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="my-workflows" className="space-y-6">
+          <TabsList>
             <TabsTrigger value="my-workflows">My Workflows</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="executions">Executions</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="my-workflows" className="space-y-6">
+          <TabsContent value="my-workflows">
             {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search workflows..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+                <input
+                  placeholder="Search workflows..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6] outline-none text-white placeholder:text-white/30 transition-all"
+                />
               </div>
-              <Button variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
+              <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-all flex items-center gap-2">
+                <Filter className="h-4 w-4" />
                 Filter
-              </Button>
+              </button>
             </div>
 
             {/* Workflows Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {workflows.map((workflow) => (
-                <Card key={workflow.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(workflow.status)}
-                        <CardTitle className="text-lg">{workflow.name}</CardTitle>
+            {isLoading ? (
+              <div className="flex justify-center py-20">
+                <div className="w-8 h-8 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {workflows.map((workflow) => (
+                  <div key={workflow.id} className="group bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-[#8b5cf6]/50 transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${workflow.status === 'running' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                          {getStatusIcon(workflow.status)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-white group-hover:text-[#8b5cf6] transition-colors">{workflow.name}</h3>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${workflow.status === 'running' ? 'text-green-400' : 'text-amber-400'}`}>
+                            {workflow.status}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex space-x-1">
-                        <Button size="sm" variant="outline">
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                      <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors">
+                          <Edit className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                    <CardDescription>{workflow.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Status</span>
-                      {getStatusBadge(workflow.status)}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Last Run</span>
-                      <span className="text-sm font-medium">
-                        {workflow.lastRun.toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {workflow.nextRun && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Next Run</span>
-                        <span className="text-sm font-medium">
-                          {workflow.nextRun.toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Executions</span>
-                      <span className="text-sm font-medium">{workflow.executions}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Success Rate</span>
-                      <span className="text-sm font-medium text-green-600">
-                        {workflow.successRate}%
-                      </span>
-                    </div>
-                    
-                    <div className="flex space-x-2 pt-2">
-                      <Button 
-                        size="sm" 
-                        variant={workflow.status === 'running' ? 'outline' : 'default'}
-                        className="flex-1"
-                      >
-                        {workflow.status === 'running' ? (
-                          <>
-                            <Pause className="h-3 w-3 mr-1" />
-                            Pause
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-3 w-3 mr-1" />
-                            Start
-                          </>
-                        )}
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Settings className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
 
-            {/* Empty State */}
-            {workflows.length === 0 && (
-              <div className="text-center py-12">
-                <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No workflows found</h3>
-                <p className="text-gray-500 mb-4">
-                  Create your first workflow to get started with automation.
-                </p>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Workflow
-                </Button>
+                    <p className="text-sm text-white/50 mb-6 line-clamp-2 h-10">
+                      {workflow.description}
+                    </p>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white/40">Success Rate</span>
+                        <span className="text-green-400 font-bold">{workflow.successRate}%</span>
+                      </div>
+                      <div className="w-full bg-white/5 rounded-full h-1.5">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${workflow.successRate}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all flex items-center justify-center gap-2 ${workflow.status === 'running'
+                        ? 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
+                        : 'bg-[#8b5cf6] border-transparent text-white hover:bg-[#7c3aed]'}`}>
+                        {workflow.status === 'running' ? (
+                          <> <Pause className="h-4 w-4" /> Pause </>
+                        ) : (
+                          <> <Play className="h-4 w-4" /> Start </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add New Card */}
+                <div className="group border-2 border-dashed border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-[#8b5cf6]/50 hover:bg-white/5 transition-all cursor-pointer min-h-[250px]">
+                  <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#8b5cf6] transition-colors">
+                    <Plus className="w-6 h-6 text-white/40 group-hover:text-white" />
+                  </div>
+                  <p className="font-bold text-white/60 group-hover:text-white">Create New Workflow</p>
+                </div>
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="templates" className="space-y-6">
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search templates..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <Button variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </div>
-
-            {/* Templates Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map((template) => (
-                <Card key={template.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <Badge variant="outline">{template.category}</Badge>
-                    </div>
-                    <CardDescription>{template.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Downloads</span>
-                      <span className="text-sm font-medium">{template.downloads}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Rating</span>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-sm font-medium">{template.rating}</span>
-                        <span className="text-yellow-500">⭐</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Price</span>
-                      <span className="text-sm font-medium">
-                        {template.price === 0 ? 'Free' : `$${template.price}`}
-                      </span>
-                    </div>
-                    
-                    <div className="flex space-x-2 pt-2">
-                      <Button size="sm" className="flex-1">
-                        <Plus className="h-3 w-3 mr-1" />
-                        Use Template
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        Preview
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          <TabsContent value="templates">
+            <div className="text-center py-20">
+              <p className="text-white/50">Templates content placeholder...</p>
             </div>
           </TabsContent>
 
-          <TabsContent value="executions" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Execution History</CardTitle>
-                <CardDescription>
-                  View the history of workflow executions and their results.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    {
-                      id: 1,
-                      workflow: 'Social Media Automation',
-                      status: 'completed',
-                      startedAt: new Date(Date.now() - 1000 * 60 * 30),
-                      completedAt: new Date(Date.now() - 1000 * 60 * 25),
-                      duration: '5m 12s'
-                    },
-                    {
-                      id: 2,
-                      workflow: 'Content Generation',
-                      status: 'failed',
-                      startedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-                      completedAt: new Date(Date.now() - 1000 * 60 * 60 * 2 + 1000 * 60 * 3),
-                      duration: '3m 45s'
-                    },
-                    {
-                      id: 3,
-                      workflow: 'Analytics Report',
-                      status: 'completed',
-                      startedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-                      completedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 + 1000 * 60 * 8),
-                      duration: '8m 33s'
-                    }
-                  ].map((execution) => (
-                    <div key={execution.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        {getStatusIcon(execution.status)}
-                        <div>
-                          <h3 className="font-medium">{execution.workflow}</h3>
-                          <p className="text-sm text-gray-500">
-                            Started: {execution.startedAt.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="text-sm font-medium">{execution.duration}</p>
-                          <p className="text-xs text-gray-500">
-                            {execution.completedAt.toLocaleString()}
-                          </p>
-                        </div>
-                        {getStatusBadge(execution.status)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="executions">
+            <div className="text-center py-20">
+              <p className="text-white/50">Execution history placeholder...</p>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

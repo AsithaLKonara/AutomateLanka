@@ -60,7 +60,7 @@ export default function DashboardPage() {
                 </div>
                 Dashboard
               </h1>
-              <p className="text-gray-600 mt-1">Analytics and insights for your workflows</p>
+              <p className="text-white/60 mt-1">Analytics and insights for your workflows</p>
             </div>
             <div className="flex gap-3">
               <Link href="/ai-search">
@@ -70,7 +70,7 @@ export default function DashboardPage() {
                 </button>
               </Link>
               <Link href="/n8n-workflows">
-                <button className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-blue-500 font-semibold transition-all">
+                <button className="px-4 py-2 rounded-lg border-2 border-white/10 hover:border-blue-500 font-semibold transition-all">
                   Browse Workflows
                 </button>
               </Link>
@@ -123,9 +123,9 @@ export default function DashboardPage() {
                 <div key={type} className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">{type}</span>
-                    <span className="text-sm text-gray-600">{count as number}</span>
+                    <span className="text-sm text-white/50">{count as number}</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="w-full bg-white/5 rounded-full h-3">
                     <div
                       className="bg-gradient-to-r from-blue-600 to-purple-600 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${(count as number / stats.total) * 100}%` }}
@@ -154,9 +154,9 @@ export default function DashboardPage() {
                   <div key={level} className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="font-medium capitalize">{level}</span>
-                      <span className="text-sm text-gray-600">{count as number}</span>
+                      <span className="text-sm text-white/50">{count as number}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-white/5 rounded-full h-3">
                       <div
                         className={`bg-gradient-to-r ${colors[level as keyof typeof colors]} h-3 rounded-full transition-all duration-500`}
                         style={{ width: `${(count as number / stats.total) * 100}%` }}
@@ -179,7 +179,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-2">
               {recentSearches.map((search, idx) => (
                 <Link key={idx} href={`/ai-search?q=${encodeURIComponent(search)}`}>
-                  <div className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 transition-all cursor-pointer">
+                  <div className="px-4 py-2 rounded-lg bg-white/5 hover:bg-blue-500/10 border border-white/10 hover:border-blue-500/30 transition-all cursor-pointer">
                     <span className="text-sm font-medium">{search}</span>
                   </div>
                 </Link>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
                 <Brain className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2">AI-Powered Search</h3>
-              <p className="text-gray-600 mb-4">Find workflows using natural language</p>
+              <p className="text-white/50 mb-4">Find workflows using natural language</p>
               <div className="flex items-center text-blue-600 font-semibold group-hover:gap-2 transition-all">
                 <span>Try Now</span>
                 <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -210,7 +210,7 @@ export default function DashboardPage() {
                 <Workflow className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2">Browse All Workflows</h3>
-              <p className="text-gray-600 mb-4">Explore {stats?.total || '2,057'}+ automations</p>
+              <p className="text-white/50 mb-4">Explore {stats?.total || '2,057'}+ automations</p>
               <div className="flex items-center text-blue-600 font-semibold group-hover:gap-2 transition-all">
                 <span>Explore</span>
                 <ArrowUpRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -255,13 +255,13 @@ export default function DashboardPage() {
               { action: 'Active workflows', count: stats?.active || 0, time: '1 min ago', icon: Activity, color: 'green' },
               { action: 'Database optimized', count: 1, time: '5 min ago', icon: Zap, color: 'yellow' }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all">
+              <div key={idx} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5">
                 <div className={`p-3 rounded-xl bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 text-white`}>
                   <item.icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
                   <div className="font-semibold">{item.action}</div>
-                  <div className="text-sm text-gray-600">{item.time}</div>
+                  <div className="text-sm text-white/50">{item.time}</div>
                 </div>
                 <div className="text-2xl font-bold">{item.count.toLocaleString()}</div>
               </div>
