@@ -2,6 +2,9 @@ import workflowQueue from '../config/queue';
 import { WorkflowExecutor } from './workflowExecutor';
 import { billingService } from './billingService';
 import prisma from '../lib/prisma';
+import workflowExecutionService from './workflowExecutionService';
+import { auditLogHook } from '../hooks/auditLogHook';
+import { checkpointHook } from '../hooks/checkpointHook';
 
 export interface WorkflowJob {
   runId: string;
@@ -17,6 +20,10 @@ export class WorkflowWorker {
    */
   static start() {
     console.log('🚀 Starting workflow worker...');
+
+    // Register baseline hooks
+    workflowExecutionService.registerHook(auditLogHook);
+    workflowExecutionService.registerHook(checkpointHook);
 
     workflowQueue.process(async (job) => {
       const { runId } = job.data as WorkflowJob;
@@ -48,10 +55,24 @@ export class WorkflowWorker {
 
         console.log(`▶️  Executing workflow: ${run.workflow.name}`);
 
-        // Create executor
+        // Trigger workflow start hook
+        await workflowExecutionService.triggerWorkflowStart(
+          runId,
+          run.workflowId,
+          run.workspaceId
+        );
+
+        // Create executor with initial state if resuming
+        const initialOutputs = new Map<string, any>(
+          Object.entries((run.outputData as any) || {})
+        );
+
         const executor = new WorkflowExecutor(
           run.workflow.json,
-          run.workspaceId
+          run.workspaceId,
+          runId,
+          initialOutputs,
+          run.nodeExecutions || 0
         );
 
         // Execute workflow
@@ -72,6 +93,9 @@ export class WorkflowWorker {
             nodeExecutions: result.nodeExecutions,
           },
         });
+
+        // Trigger workflow success hook
+        await workflowExecutionService.triggerWorkflowSuccess(runId, result);
 
         // Increment usage
         await billingService.incrementUsage(
@@ -103,6 +127,9 @@ export class WorkflowWorker {
             },
           });
         }
+
+        // Trigger workflow error hook
+        await workflowExecutionService.triggerWorkflowError(runId, error);
 
         throw error;
       }

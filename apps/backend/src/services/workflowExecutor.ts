@@ -1,6 +1,7 @@
 import { decrypt } from '../utils/encryption';
 import axios from 'axios';
 import prisma from '../lib/prisma';
+import workflowExecutionService from './workflowExecutionService';
 
 export interface ExecutionResult {
   output: any;
@@ -15,16 +16,18 @@ export interface ExecutionResult {
 export class WorkflowExecutor {
   private workflowJson: any;
   private workspaceId: string;
+  private runId?: string;
   private logs: string[];
   private nodeExecutions: number;
   private nodeOutputs: Map<string, any>;
 
-  constructor(workflowJson: any, workspaceId: string) {
+  constructor(workflowJson: any, workspaceId: string, runId?: string, initialOutputs?: Map<string, any>, initialNodeExecutions: number = 0) {
     this.workflowJson = workflowJson;
     this.workspaceId = workspaceId;
+    this.runId = runId;
     this.logs = [];
-    this.nodeExecutions = 0;
-    this.nodeOutputs = new Map();
+    this.nodeExecutions = initialNodeExecutions;
+    this.nodeOutputs = initialOutputs || new Map();
   }
 
   /**
@@ -44,6 +47,11 @@ export class WorkflowExecutor {
 
       // Execute nodes in order
       for (const node of executionOrder) {
+        // Skip already executed nodes if resuming
+        if (this.nodeOutputs.has(node.name)) {
+          this.log(`⏩ Skipping already executed node: ${node.name}`);
+          continue;
+        }
         await this.executeNode(node, inputData);
       }
 
@@ -69,6 +77,11 @@ export class WorkflowExecutor {
 
     this.log(`\n📍 Executing node: ${nodeName} (${nodeType})`);
     this.nodeExecutions++;
+
+    // Trigger node start hook
+    if (this.runId) {
+      await workflowExecutionService.triggerNodeStart(this.runId, nodeName, nodeType);
+    }
 
     try {
       // Resolve parameters if they are expressions
@@ -105,9 +118,20 @@ export class WorkflowExecutor {
       this.nodeOutputs.set(nodeName, result);
       this.log(`✅ Node completed: ${nodeName}`);
 
+      // Trigger node success hook
+      if (this.runId) {
+        await workflowExecutionService.triggerNodeSuccess(this.runId, nodeName, result);
+      }
+
       return result;
     } catch (error: any) {
       this.log(`❌ Node failed: ${nodeName} - ${error.message}`);
+
+      // Trigger node error hook
+      if (this.runId) {
+        await workflowExecutionService.triggerNodeError(this.runId, nodeName, error);
+      }
+
       throw new Error(`Node ${nodeName} failed: ${error.message}`);
     }
   }
@@ -389,45 +413,68 @@ export class WorkflowExecutor {
   }
 
   /**
-   * Build execution order using topological sort
+   * Build execution order using topological sort with cycle detection
    */
   private buildExecutionOrder(nodes: any[]): any[] {
     const connections = this.workflowJson.connections || {};
     const visited = new Set<string>();
+    const visiting = new Set<string>();
     const order: any[] = [];
 
-    // Simple DFS-based topological sort
+    // Simple DFS-based topological sort with cycle detection
     const visit = (nodeName: string) => {
+      if (visiting.has(nodeName)) {
+        throw new Error(`Circular dependency detected: ${Array.from(visiting).join(' → ')} → ${nodeName}`);
+      }
       if (visited.has(nodeName)) return;
-      visited.add(nodeName);
+
+      visiting.add(nodeName);
 
       const node = nodes.find(n => n.name === nodeName);
-      if (!node) return;
+      if (!node) {
+        visiting.delete(nodeName);
+        return;
+      }
 
       // Visit dependencies first (nodes that output to this node)
       for (const [sourceName, sourceConnections] of Object.entries(connections)) {
-        const outputs = sourceConnections as { main?: { node: string }[] };
+        const outputs = sourceConnections as { main?: { node: string }[][][] } || {};
 
-        if (outputs.main) {
-          for (const connection of outputs.main) {
-            if (connection.node === nodeName) {
+        // n8n connections can be deeply nested: [source].main[outputIndex][connectionIndex]
+        // But our current implementation treats it as { main: { node: string }[] }
+        // Let's stick to the current structure but handle potential differences
+        const mainConnections = (sourceConnections as any).main;
+
+        if (mainConnections) {
+          // Flatten if it's the n8n array-of-arrays format
+          const targetNodes = Array.isArray(mainConnections[0])
+            ? mainConnections.flat()
+            : mainConnections;
+
+          for (const connection of targetNodes) {
+            if (connection && connection.node === nodeName) {
               visit(sourceName);
             }
           }
         }
       }
 
+      visiting.delete(nodeName);
+      visited.add(nodeName);
       order.push(node);
     };
 
-    // Start with trigger nodes (nodes with no inputs)
-    for (const node of nodes) {
-      if (node.type?.includes('trigger') || node.type?.includes('webhook')) {
-        visit(node.name);
-      }
+    // Start with trigger nodes (nodes with no inputs/dependencies)
+    const triggerNodes = nodes.filter(node =>
+      node.type?.toLowerCase().includes('trigger') ||
+      node.type?.toLowerCase().includes('webhook')
+    );
+
+    for (const node of triggerNodes) {
+      visit(node.name);
     }
 
-    // Visit remaining nodes
+    // Visit remaining nodes to ensure all reachable nodes are included
     for (const node of nodes) {
       visit(node.name);
     }
