@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { aiSearchService } from './aiSearchService';
 import prisma from '../lib/prisma';
 import { auditService } from './auditService';
 
@@ -80,6 +81,13 @@ export class PrismaWorkflowService {
 
     // Log administrative action
     await auditService.logWorkflow('create', workflow.id, input.workspaceId, input.createdBy, { name: workflow.name });
+
+    // Trigger AI embedding for search
+    try {
+      await aiSearchService.embedWorkflow(workflow);
+    } catch (e) {
+      console.error('Failed to generate AI embedding during creation:', e);
+    }
 
     return workflow;
   }
@@ -305,6 +313,15 @@ export class PrismaWorkflowService {
       name: updated.name,
       changedFields: Object.keys(input)
     });
+
+    // Trigger AI re-embedding if JSON or name changed
+    if (input.json || input.name) {
+      try {
+        await aiSearchService.embedWorkflow(updated);
+      } catch (e) {
+        console.error('Failed to update AI embedding:', e);
+      }
+    }
 
     return updated;
   }
