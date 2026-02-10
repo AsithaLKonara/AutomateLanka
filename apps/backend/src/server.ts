@@ -2,15 +2,19 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import { createServer } from 'http'
-import { config } from 'dotenv'
-import { initSentry, sentryRequestHandler, sentryErrorHandler } from './config/sentry'
-import { validateEnv } from './config/env'
+import { initSentry, sentryRequestHandler, sentryErrorHandler } from './lib/sentry'
+import { env } from './config/env'
 import prisma from './lib/prisma'
 
-// Load environment variables
-config()
-
 // Validate environment variables (skip in test mode)
+console.log('--- Environment Check ---');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'PRESENT' : 'MISSING');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log('SKIP_ENV_VALIDATION:', process.env.SKIP_ENV_VALIDATION);
+console.log('-------------------------');
+
 if (process.env.NODE_ENV !== 'test' && process.env.SKIP_ENV_VALIDATION !== 'true') {
   try {
     validateEnv()
@@ -73,7 +77,7 @@ app.use(helmet())
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:4000', process.env.FRONTEND_URL].filter(Boolean) as string[],
   credentials: true
 }))
 app.use(express.json({ limit: '10mb' }))
