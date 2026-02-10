@@ -10,7 +10,7 @@
     "services/*"
   ],
   "scripts": {
-    "build": "turbo build",
+    "build:all": "turbo build",
     "dev": "turbo dev",
     "dev:all": "turbo dev --parallel",
     "lint": "turbo lint",

@@ -28,10 +28,11 @@ router.get('/', async (req, res) => {
 
     // Check database
     try {
+      const start = Date.now()
       await prisma.$queryRaw`SELECT 1`
       health.services.database = {
         status: 'healthy',
-        responseTime: Date.now()
+        responseTime: Date.now() - start
       }
     } catch (error: any) {
       health.services.database = {

@@ -1,31 +1,31 @@
-/**
- * Environment Variable Validation
- * Validates all required environment variables at startup
- */
+import { config } from 'dotenv';
+
+// Load environment variables before any validation
+config();
 
 interface EnvConfig {
   // Database
   DATABASE_URL: string;
-  
+
   // Redis
   REDIS_URL?: string;
-  
+
   // JWT
   JWT_SECRET: string;
   REFRESH_SECRET: string;
-  
+
   // Encryption
   ENCRYPTION_KEY: string;
-  
+
   // Stripe
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
-  
+
   // Server
   PORT: string;
   NODE_ENV: string;
   FRONTEND_URL?: string;
-  
+
   // Optional
   SENTRY_DSN?: string;
   SMTP_HOST?: string;

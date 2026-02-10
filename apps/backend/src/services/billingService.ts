@@ -154,6 +154,25 @@ export class BillingService {
    * Handle Stripe webhook event
    */
   async handleWebhook(event: Stripe.Event) {
+    // Check for idempotency
+    const existingEvent = await prisma.stripeEvent.findUnique({
+      where: { id: event.id }
+    });
+
+    if (existingEvent) {
+      console.log(`⚠️ Stripe event ${event.id} already processed. Skipping.`);
+      return;
+    }
+
+    // Record event as processing
+    await prisma.stripeEvent.create({
+      data: {
+        id: event.id,
+        type: event.type,
+        status: 'processing'
+      }
+    });
+
     try {
       switch (event.type) {
         case 'checkout.session.completed':
@@ -180,8 +199,19 @@ export class BillingService {
         default:
           console.log(`Unhandled event type: ${event.type}`);
       }
+
+      // Mark as processed
+      await prisma.stripeEvent.update({
+        where: { id: event.id },
+        data: { status: 'processed' }
+      });
     } catch (error) {
       console.error('Webhook handler error:', error);
+      // Mark as failed so it can be retried
+      await prisma.stripeEvent.update({
+        where: { id: event.id },
+        data: { status: 'failed' }
+      });
       throw error;
     }
   }

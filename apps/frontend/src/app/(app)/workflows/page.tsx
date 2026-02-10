@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Plus, Search, Filter, Play, Pause, Edit, Trash2, Copy,
-  CheckCircle, XCircle, AlertCircle, Zap, Settings, Activity
+  CheckCircle, XCircle, AlertCircle, Zap, Settings, Activity,
+  Loader2, RefreshCw
 } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
 
 // Mock Tabs component for speed/compatibility with raw tailwind
 const Tabs = ({ children, defaultValue, className }: any) => {
@@ -57,38 +59,37 @@ export default function WorkflowsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const loadWorkflows = async () => {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 800))
-        setWorkflows([
-          {
-            id: 1,
-            name: 'Social Media Automation',
-            description: 'Automatically post content to multiple social media platforms',
-            status: 'running',
-            lastRun: new Date(Date.now() - 1000 * 60 * 30),
-            executions: 45,
-            successRate: 98
-          },
-          {
-            id: 2,
-            name: 'Content Generation',
-            description: 'Generate AI-powered content for social media posts',
-            status: 'paused',
-            lastRun: new Date(Date.now() - 1000 * 60 * 60 * 4),
-            executions: 23,
-            successRate: 95
-          },
-        ])
-      } catch (error) {
-        console.error('Failed to load workflows:', error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchWorkflows = async () => {
+    try {
+      setIsLoading(true)
+      const response = await apiClient.get('/api/saas-workflows')
+      // The API returns { success: true, data: { workflows: [], total: 0 } }
+      setWorkflows(response.data.data.workflows || [])
+    } catch (error) {
+      console.error('Failed to load workflows:', error)
+    } finally {
+      setIsLoading(false)
     }
-    loadWorkflows()
+  }
+
+  useEffect(() => {
+    fetchWorkflows()
   }, [])
+
+  const toggleStatus = async (workflow: any) => {
+    try {
+      const newStatus = !workflow.active
+      await apiClient.put(`/api/saas-workflows/${workflow.id}`, {
+        active: newStatus
+      })
+      // Update local state
+      setWorkflows(prev => prev.map(w =>
+        w.id === workflow.id ? { ...w, active: newStatus } : w
+      ))
+    } catch (error) {
+      console.error('Failed to toggle workflow status:', error)
+    }
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -168,13 +169,13 @@ export default function WorkflowsPage() {
                   <div key={workflow.id} className="group bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-[#8b5cf6]/50 transition-all">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${workflow.status === 'running' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                          {getStatusIcon(workflow.status)}
+                        <div className={`p-2 rounded-lg ${workflow.active ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                          {getStatusIcon(workflow.active ? 'running' : 'paused')}
                         </div>
                         <div>
                           <h3 className="font-bold text-white group-hover:text-[#8b5cf6] transition-colors">{workflow.name}</h3>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider ${workflow.status === 'running' ? 'text-green-400' : 'text-amber-400'}`}>
-                            {workflow.status}
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${workflow.active ? 'text-green-400' : 'text-amber-400'}`}>
+                            {workflow.active ? 'Active' : 'Paused'}
                           </span>
                         </div>
                       </div>
@@ -200,10 +201,12 @@ export default function WorkflowsPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all flex items-center justify-center gap-2 ${workflow.status === 'running'
-                        ? 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
-                        : 'bg-[#8b5cf6] border-transparent text-white hover:bg-[#7c3aed]'}`}>
-                        {workflow.status === 'running' ? (
+                      <button
+                        onClick={() => toggleStatus(workflow)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all flex items-center justify-center gap-2 ${workflow.active
+                          ? 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
+                          : 'bg-[#8b5cf6] border-transparent text-white hover:bg-[#7c3aed]'}`}>
+                        {workflow.active ? (
                           <> <Pause className="h-4 w-4" /> Pause </>
                         ) : (
                           <> <Play className="h-4 w-4" /> Start </>

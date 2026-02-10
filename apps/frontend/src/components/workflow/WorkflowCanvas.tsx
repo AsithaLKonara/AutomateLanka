@@ -16,6 +16,8 @@ import {
     useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Loader2, Check, AlertTriangle, Save } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
 
 import BaseNode from './BaseNode';
 import Sidebar from './Sidebar';
@@ -31,12 +33,67 @@ const nodeTypes: any = {
 
 const defaultViewport = { x: 0, y: 0, zoom: 0.8 };
 
-function WorkflowCanvasInternal() {
+function WorkflowCanvasInternal({ workflowId, workspaceId }: { workflowId: string; workspaceId: string }) {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>([]);
     const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
-    const { screenToFlowPosition } = useReactFlow();
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const { screenToFlowPosition, setViewport } = useReactFlow();
+
+    // Load workflow on mount
+    React.useEffect(() => {
+        const loadWorkflow = async () => {
+            try {
+                setIsLoading(true);
+                const response = await apiClient.get(`/api/saas-workflows/${workflowId}`);
+                const data = response.data;
+
+                if (data && data.json) {
+                    const { nodes: loadedNodes = [], edges: loadedEdges = [], viewport } = data.json;
+                    setNodes(loadedNodes);
+                    setEdges(loadedEdges);
+                    if (viewport) {
+                        setViewport(viewport);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load workflow:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (workflowId) {
+            loadWorkflow();
+        }
+    }, [workflowId, setNodes, setEdges, setViewport]);
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            setSaveStatus('idle');
+
+            const workflowData = {
+                json: {
+                    nodes,
+                    edges,
+                    // Optionally save viewport
+                },
+            };
+
+            await apiClient.put(`/api/saas-workflows/${workflowId}`, workflowData);
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (error) {
+            console.error('Failed to save workflow:', error);
+            setSaveStatus('error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const onConnect = useCallback(
         (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
@@ -137,12 +194,36 @@ function WorkflowCanvasInternal() {
                         nodeColor="#8b5cf6"
                     />
 
-                    <Panel position="top-right" className="flex gap-4 p-4">
-                        <button className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-bold text-sm transition-all">
+                    <Panel position="top-right" className="flex items-center gap-4 p-4">
+                        {saveStatus === 'success' && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-xs font-bold animate-in fade-in slide-in-from-right-4">
+                                <Check className="h-3 w-3" />
+                                Saved successfully
+                            </div>
+                        )}
+                        {saveStatus === 'error' && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-bold animate-in fade-in slide-in-from-right-4">
+                                <AlertTriangle className="h-3 w-3" />
+                                Failed to save
+                            </div>
+                        )}
+                        <button
+                            className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50"
+                            disabled={isSaving || isLoading}
+                        >
                             Discard
                         </button>
-                        <button className="px-8 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-900/20">
-                            Save Workflow
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving || isLoading}
+                            className="px-8 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-900/20 flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Save className="h-4 w-4" />
+                            )}
+                            {isSaving ? 'Saving...' : 'Save Workflow'}
                         </button>
                     </Panel>
                 </ReactFlow>
@@ -158,10 +239,10 @@ function WorkflowCanvasInternal() {
     );
 }
 
-export default function WorkflowCanvas() {
+export default function WorkflowCanvas({ workflowId, workspaceId }: { workflowId: string; workspaceId: string }) {
     return (
         <ReactFlowProvider>
-            <WorkflowCanvasInternal />
+            <WorkflowCanvasInternal workflowId={workflowId} workspaceId={workspaceId} />
         </ReactFlowProvider>
     );
 }

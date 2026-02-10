@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import prisma from '../lib/prisma';
+import { auditService } from './auditService';
 
 export interface CreateWorkflowInput {
   name: string;
@@ -76,6 +77,9 @@ export class PrismaWorkflowService {
         note: 'Initial version',
       },
     });
+
+    // Log administrative action
+    await auditService.logWorkflow('create', workflow.id, input.workspaceId, input.createdBy, { name: workflow.name });
 
     return workflow;
   }
@@ -296,6 +300,19 @@ export class PrismaWorkflowService {
       });
     }
 
+    // Log administrative action
+    await auditService.log({
+      workspaceId: workflow.workspaceId,
+      userId,
+      action: 'workflow.update',
+      entityId: workflowId,
+      entityType: 'workflow',
+      metadata: {
+        name: updated.name,
+        changedFields: Object.keys(input)
+      },
+    });
+
     return updated;
   }
 
@@ -328,6 +345,9 @@ export class PrismaWorkflowService {
     await prisma.workflow.delete({
       where: { id: workflowId },
     });
+
+    // Log administrative action
+    await auditService.logWorkflow('delete', workflowId, workflow.workspaceId, userId, { name: workflow.name });
 
     return { success: true };
   }
@@ -429,6 +449,11 @@ export class PrismaWorkflowService {
     const updated = await prisma.workflow.update({
       where: { id: workflowId },
       data: { active: !workflow.active },
+    });
+
+    // Log administrative action
+    await auditService.logWorkflow(updated.active ? 'update' : 'update', workflowId, workflow.workspaceId, userId, {
+      action: updated.active ? 'activate' : 'deactivate'
     });
 
     return updated;

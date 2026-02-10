@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import prisma from '../lib/prisma';
+import { auditService } from './auditService';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -204,6 +205,9 @@ export class WorkspaceService {
       where: { id: workspaceId },
     });
 
+    // Log administrative action
+    await auditService.logWorkspace('delete', workspaceId, userId);
+
     return { success: true };
   }
 
@@ -288,6 +292,13 @@ export class WorkspaceService {
     });
 
     // In a real app, send invitation email here
+
+    // Log administrative action
+    await auditService.logWorkspace('invite_member', input.workspaceId, input.invitedBy, {
+      email: input.email,
+      role: input.role,
+      membershipId: membership.id
+    });
 
     return membership;
   }
@@ -457,6 +468,9 @@ export class WorkspaceService {
         },
       },
     });
+
+    // Log administrative action
+    await auditService.logWorkspace('remove_member', workspaceId, requestingUserId, { targetUserId });
 
     return { success: true };
   }

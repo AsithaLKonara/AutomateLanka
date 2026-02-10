@@ -1,129 +1,125 @@
 
-# AutomateLanka: AI-Powered Automation Platform
+# AutomateLanka: AI-Powered Enterprise Automation Platform
 
-AutomateLanka is an enterprise-grade, self-hosted automation platform that combines the power of n8n with an intelligent AI search layer and a modern, premium UI.
+AutomateLanka is a professional, self-hosted automation hub that bridges the gap between intelligent AI discovery and high-fidelity workflow execution. Built with a premium "Glassmorphism" aesthetic, it offers a robust SaaS infrastructure for managing complex business processes at scale.
 
-## 🚀 Features
+## 🚀 Key Features
 
-*   **AI-Powered Search**: Semantic search implementation to find potential workflows.
-*   **Modern UI/UX**: Glassmorphism design, 3D animations, and a responsive layout.
-*   **Enterprise Architecture**:
-    *   **Backend**: Node.js/Express with TypeScript.
-    *   **Frontend**: Next.js 15 with Tailwind CSS.
-    *   **Database**: PostgreSQL with Prisma ORM.
-    *   **Queue**: Redis + BullMQ for workflow execution.
-*   **Production Ready**: Includes billing (Stripe), authentication (JWT/OAuth), and audit logging.
+### 🧠 Intelligent Search & Discovery
+*   **Semantic AI Search**: Discover workflows using natural language queries powered by local embeddings (Xenova Transformers).
+*   **Intelligent Intent Analysis**: Automatically extract services, triggers, and complexity levels from search queries.
+*   **Workflow Recommendations**: Real-time suggestions for automation patterns based on user input.
+
+### 🏗️ Workflow Engine (n8n-Style)
+*   **Visual Canvas**: High-fidelity, drag-and-drop workflow builder with a node-based architecture.
+*   **Topological Execution**: Intelligent node dependencies management ensuring sequential and parallel steps run correctly.
+*   **Extensible Handlers**: Native support for HTTP Requests, Slack, Gmail, Google Sheets, Set transformations, and Conditional (IF) logic.
+*   **Lifecycle Hooks**: System-wide events (`onWorkflowSuccess`, `onNodeError`, etc.) for auditing and custom side effects.
+
+### � Business & SaaS Layer
+*   **Stripe Subscriptions**: Integrated billing system with checkout sessions, customer portal, and secure webhook processing.
+*   **Usage Enforcement**: Hardened middleware to manage tiered plan limits (Workflow counts, Monthly runs, Member seats).
+*   **Multi-Tenancy**: Secure Workspace (Organization) isolation with RBAC-based membership management.
+*   **Transactional Emails**: Automated outgoing mail for verification, password resets, and invitations via Resend.
+
+### 🛡️ Security & Reliability
+*   **Audit Logging**: Comprehensive activity tracking for every critical action within a workspace.
+*   **Security Service**: Multi-layer defense against XSS, clickjacking, and intelligent rate limiting.
+*   **Monitoring**: Centralized error tracking with Sentry and built-in health diagnostics.
+*   **Database Persistence**: Robust schema management using Prisma ORM with SQLite (Dev) and PostgreSQL (Prod) support.
 
 ---
 
-## 🛠️ Getting Started
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS & Framer Motion (Glassmorphism UI)
+- **State Management**: React Query & Lucide Icons
+- **Workflow UI**: XYFlow (React Flow) Foundation
+
+### Backend
+- **Runtime**: Node.js & Express (TypeScript)
+- **Queue System**: BullMQ with Redis for asynchronous execution
+- **Database**: PostgreSQL with Prisma ORM
+- **AI/ML**: Xenova Transformers for local semantic embeddings
+
+### Infrastructure & DevOps
+- **Monorepo**: TurboRepo for high-performance builds
+- **Monitoring**: Sentry SDK integration
+- **CI/CD Ready**: Dockerized environments and production-grade deployment scripts
+
+---
+
+## � Project Structure
+
+```
+├── apps/
+│   ├── frontend/          # Premium Next.js web application
+│   └── backend/           # Scalable Express/Node.js API server
+├── packages/              # Shared Monorepo workspace
+│   ├── db/                # Unified Prisma schema and database client
+│   ├── ui/                # Shared component library
+│   └── common/            # Shared types, constants, and utilities
+├── scripts/               # DevOps, verification, and maintenance scripts
+├── DEPLOY.sh              # Master deployment entry point
+└── docker-compose.yml     # Infrastructure orchestration (Database, Redis)
+```
+
+---
+
+## 🚦 Getting Started
 
 ### Prerequisites
+*   **Node.js**: v20+
+*   **Docker**: Required for Redis and Database
+*   **pnpm**: Recommended for monorepo management
 
-*   Node.js (v18+)
-*   Docker (for local database/redis)
-*   pnpm (recommended) or npm
+### Installation & Local Setup
 
-### Installation
-
-1.  **Clone the repository**:
+1.  **Clone & Install**:
     ```bash
     git clone <repo-url>
     cd automatelanka
+    pnpm install
     ```
 
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
+2.  **Environment Setup**:
+    Copy `env.example` to `.env` and fill in your Stripe, Resend, and CLerk credentials.
 
-3.  **Environment Setup**:
-    Copy the example environment file:
-    ```bash
-    cp env.example .env
-    ```
-    *Update `.env` with your local credentials (database, stripe keys, etc.).*
-
-4.  **Database Setup**:
-    Start the local infrastructure using Docker:
+3.  **Start Infrastructure**:
     ```bash
     docker-compose up -d
     ```
-    Run migrations:
+
+4.  **Database Migration**:
     ```bash
     npm run db:setup
     ```
 
-5.  **Start Development Server**:
+5.  **Run Development Mode**:
     ```bash
     npm run dev
     ```
-    *   Frontend: `http://localhost:3000`
-    *   Backend: `http://localhost:8000`
 
 ---
 
 ## 📦 Deployment
 
 ### Production Checklist
+Ensure the following variables are set in your production environment (Railway/Vercel):
+- `DATABASE_URL`, `REDIS_URL`
+- `STRIPE_SECRET_KEY`, `RESEND_API_KEY`
+- `JWT_SECRET`, `ENCRYPTION_KEY` (32 chars)
 
-Before deploying, ensure you have configured the following secrets in your production environment (Railway/Vercel):
-
-*   **Database**: `DATABASE_URL` (PostgreSQL), `REDIS_URL`
-*   **Security**: `JWT_SECRET`, `REFRESH_SECRET`, `ENCRYPTION_KEY` (32 chars)
-*   **Payments**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-*   **Email**: `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`
-
-### Deployment Tools
-
-We provide utility scripts to streamline the deployment process:
-
-*   **`DEPLOY.sh`**: The master deployment script. It verifies environment variables, runs database migrations, and builds all applications.
-    ```bash
-    ./DEPLOY.sh
-    ```
-
-*   **`scripts/setup-production-env.ts`**: Generates secure production secrets (JWT, Encryption keys) and creates `.env.production` files.
-    ```bash
-    npx tsx scripts/setup-production-env.ts
-    ```
-
-*   **`scripts/verify-db-connection.ts`**: specific check for verifying database connectivity before running heavy migrations.
-
-### Manual Deployment Guide
-
-#### 1. Backend (Railway/VPS)
-1.  Connect your repo.
-2.  Set start command: `npm start` (ensure it runs `node dist/main.js`).
-3.  Set all environment variables defined in `env.example`.
-
-#### 2. Frontend (Vercel)
-1.  Import the `apps/frontend` directory.
-2.  Set framework preset to **Next.js**.
-3.  Add environment variables:
-    *   `NEXT_PUBLIC_BACKEND_URL`: URL of your deployed backend.
-    *   `NEXT_PUBLIC_STRIPE_KEY`: Your Stripe publishable key.
+### Automation Scripts
+- **`./DEPLOY.sh`**: Automatic environment verification, building, and migration.
+- **`scripts/setup-production-env.ts`**: Helper to generate secure production secrets.
 
 ---
 
-## 📂 Project Structure
-
-```
-├── apps/
-│   ├── frontend/          # Next.js web application
-│   └── backend/           # Express/Node.js API server
-├── packages/              # Shared libraries
-│   ├── db/                # Prisma schema and client
-│   └── common/            # Shared types and utilities
-├── scripts/               # DevOps and maintenance scripts
-├── DEPLOY.sh              # Master deployment entry point
-└── docker-compose.yml     # Local development infrastructure
-```
-
 ## 🤝 Contributing
-
-Please ensure all changes are verified with `npm run build` and follow the existing coding standards.
+AutomateLanka follows professional coding standards. Please ensure all code passes `npm run lint` and `npm run test` before submitting changes.
 
 ## 📄 License
-
-Professional License. See LICENSE file for details.
+Enterprise Professional License. See LICENSE for details.

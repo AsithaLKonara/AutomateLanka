@@ -43,18 +43,18 @@ module.exports = {
           foreground: 'hsl(var(--card-foreground))',
         },
         n8n: {
-          primary: 'var(--color--primary)',
-          'primary-shade': 'var(--color--primary--shade-1)',
-          secondary: 'var(--color--secondary)',
-          success: 'var(--color--success)',
-          warning: 'var(--color--warning)',
-          danger: 'var(--color--danger)',
-          text: 'var(--color--text)',
-          'text-shade': 'var(--color--text--shade-1)',
-          'text-tint': 'var(--color--text--tint-1)',
-          background: 'var(--color--background)',
-          'background-light': 'var(--color--background--light-3)',
-          foreground: 'var(--color--foreground)',
+          primary: '#8b5cf6', // Hero Purple
+          'primary-shade': '#7c3aed', // Darker Purple
+          secondary: '#3b82f6', // Blue
+          success: '#22c55e',
+          warning: '#eab308',
+          danger: '#ef4444',
+          text: '#ffffff',
+          'text-shade': 'rgba(255,255,255,0.8)',
+          'text-tint': 'rgba(255,255,255,0.6)',
+          background: '#0e0918',
+          'background-light': '#1a1625',
+          foreground: '#161121',
         }
       },
       borderRadius: {
