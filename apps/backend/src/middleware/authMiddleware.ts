@@ -192,6 +192,30 @@ export const workspaceAccessMiddleware = (
     return;
   }
 
+  // Live membership check for immediate session invalidation
+  try {
+    const prisma = (await import('../lib/prisma')).default;
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.userId,
+          workspaceId: workspaceId,
+        },
+      },
+    });
+
+    if (!membership) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Your membership in this workspace has been revoked.',
+      });
+      return;
+    }
+  } catch (error) {
+    // Fail safe - if DB is down, allow if JWT is valid
+    console.error('Membership check failed:', error);
+  }
+
   next();
 };
 

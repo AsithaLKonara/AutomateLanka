@@ -43,19 +43,30 @@ export class WorkflowExecutor {
     try {
       // Build execution order (topological sort)
       const executionOrder = this.buildExecutionOrder(nodes);
-      this.log(`Execution order: ${executionOrder.map(n => n.name).join(' → ')}`);
 
-      // Execute nodes in order
-      for (const node of executionOrder) {
-        // Skip already executed nodes if resuming
-        if (this.nodeOutputs.has(node.name)) {
-          this.log(`⏩ Skipping already executed node: ${node.name}`);
-          continue;
-        }
-        await this.executeNode(node, inputData);
+      // Group nodes by topological level for parallel execution
+      const levels = this.groupNodesByLevel(executionOrder);
+      this.log(`Execution strategy: ${levels.length} parallel steps`);
+
+      // Execute levels sequentially
+      for (let i = 0; i < levels.length; i++) {
+        const levelNodes = levels[i];
+        this.log(`\n📂 Level ${i + 1}: Executing ${levelNodes.length} nodes in parallel`);
+
+        // Execute nodes in the current level in parallel
+        await Promise.all(
+          levelNodes.map(async (node) => {
+            // Skip already executed nodes if resuming
+            if (this.nodeOutputs.has(node.name)) {
+              this.log(`⏩ Skipping already executed node: ${node.name}`);
+              return;
+            }
+            return this.executeNode(node, inputData);
+          })
+        );
       }
 
-      this.log('✅ Workflow execution completed successfully');
+      this.log('\n✅ Workflow execution completed successfully');
 
       return {
         output: Object.fromEntries(this.nodeOutputs),
@@ -563,6 +574,43 @@ export class WorkflowExecutor {
   private getValueByPath(obj: any, path: string): any {
     if (!path) return obj;
     return path.split('.').filter(Boolean).reduce((acc, part) => acc?.[part], obj);
+  }
+
+  /**
+   * Group nodes by topological level for parallel execution
+   */
+  private groupNodesByLevel(executionOrder: any[]): any[][] {
+    const levels: any[][] = [];
+    const nodeToLevel = new Map<string, number>();
+    const connections = this.workflowJson.connections || {};
+
+    for (const node of executionOrder) {
+      let maxLevel = -1;
+
+      // Check dependencies (nodes that output to this node)
+      for (const [sourceName, sourceConnections] of Object.entries(connections)) {
+        const outputs = (sourceConnections as any).main;
+        if (outputs) {
+          const targetNodes = Array.isArray(outputs[0]) ? outputs.flat() : outputs;
+          for (const connection of targetNodes) {
+            if (connection && connection.node === node.name) {
+              const sourceLevel = nodeToLevel.get(sourceName) ?? -1;
+              maxLevel = Math.max(maxLevel, sourceLevel);
+            }
+          }
+        }
+      }
+
+      const currentLevel = maxLevel + 1;
+      nodeToLevel.set(node.name, currentLevel);
+
+      if (!levels[currentLevel]) {
+        levels[currentLevel] = [];
+      }
+      levels[currentLevel].push(node);
+    }
+
+    return levels;
   }
 }
 

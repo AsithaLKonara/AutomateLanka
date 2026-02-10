@@ -1,7 +1,6 @@
-import workflowExecutionService, { ExecutionHook } from '../apps/backend/src/services/workflowExecutionService';
-import { WorkflowExecutor } from '../apps/backend/src/services/workflowExecutor';
-
 async function verifyHooks() {
+    const { default: workflowExecutionService } = await import('../apps/backend/src/services/workflowExecutionService');
+    const { WorkflowExecutor } = await import('../apps/backend/src/services/workflowExecutor');
     console.log('🧪 Starting Workflow Execution Hooks Verification...');
 
     const events: string[] = [];
@@ -29,25 +28,37 @@ async function verifyHooks() {
     workflowExecutionService.registerHook(testHook);
 
     const mockWorkflow = {
-        name: 'Test Workflow',
+        name: 'Parallel Test Workflow',
         nodes: [
-            { name: 'Node1', type: 'set', parameters: { values: { x: 1 } } },
+            { name: 'Trigger', type: 'webhook', parameters: {} },
+            { name: 'Branch1', type: 'set', parameters: { values: { x: 1 } } },
+            { name: 'Branch2', type: 'set', parameters: { values: { y: 2 } } },
+            { name: 'Join', type: 'set', parameters: { values: { z: 3 } } },
         ],
-        connections: {},
+        connections: {
+            Trigger: { main: [[{ node: 'Branch1' }, { node: 'Branch2' }]] },
+            Branch1: { main: [[{ node: 'Join' }]] },
+            Branch2: { main: [[{ node: 'Join' }]] },
+        },
     };
 
     const executor = new WorkflowExecutor(mockWorkflow, 'test-workspace', 'test-run');
 
     try {
         await executor.execute();
-        await workflowExecutionService.triggerWorkflowSuccess('test-run', { nodeExecutions: 1 });
+        await workflowExecutionService.triggerWorkflowSuccess('test-run', { nodeExecutions: 4 });
 
         console.log('\n📊 Event Sequence Tracked:');
         console.log(events.join(' -> '));
 
         const expectedEvents = [
-            'node_start_Node1',
-            'node_success_Node1',
+            'node_start_Trigger',
+            'node_success_Trigger',
+            'node_start_Branch1',
+            'node_start_Branch2',
+            'node_success_Branch1',
+            'node_success_Branch2',
+            'node_start_Join',
             'workflow_success'
         ];
 

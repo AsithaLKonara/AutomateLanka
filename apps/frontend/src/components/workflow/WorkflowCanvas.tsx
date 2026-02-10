@@ -76,11 +76,19 @@ function WorkflowCanvasInternal({ workflowId, workspaceId }: { workflowId: strin
             setIsSaving(true);
             setSaveStatus('idle');
 
+            const flow = reactFlowWrapper.current ? {
+                nodes,
+                edges,
+                viewport: { x: 0, y: 0, zoom: 1 }, // Default if needed, but getViewport is better
+            } : null;
+
+            const { x, y, zoom } = (window as any).reactFlowViewport || { x: 0, y: 0, zoom: 1 };
+
             const workflowData = {
                 json: {
                     nodes,
                     edges,
-                    // Optionally save viewport
+                    viewport: { x, y, zoom },
                 },
             };
 
