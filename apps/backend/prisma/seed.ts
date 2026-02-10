@@ -89,6 +89,47 @@ async function main() {
   }
 
   console.log('✓ Seeding completed!');
+
+  // Seed Test User for E2E
+  const testUser = await prisma.user.upsert({
+    where: { email: 'test@example.com' },
+    update: {},
+    create: {
+      email: 'test@example.com',
+      name: 'Test User',
+      passwordHash: await import('bcryptjs').then(b => b.default.hashSync('SecurePass123!', 10)),
+    },
+  });
+  console.log(`✓ Created/Updated test user: ${testUser.email}`);
+
+  // Create workspace for test user if not exists
+  const testWorkspace = await prisma.workspace.upsert({
+    where: { slug: 'test-workspace' },
+    update: {},
+    create: {
+      name: 'Test Workspace',
+      slug: 'test-workspace',
+      ownerId: testUser.id,
+    },
+  });
+  console.log(`✓ Created/Updated test workspace: ${testWorkspace.name}`);
+
+  // Add user to workspace
+  await prisma.membership.upsert({
+    where: {
+      id: 'test-membership-id',
+    },
+    update: {
+      acceptedAt: new Date(),
+    },
+    create: {
+      id: 'test-membership-id',
+      workspaceId: testWorkspace.id,
+      userId: testUser.id,
+      role: 'ADMIN',
+      acceptedAt: new Date(),
+    },
+  });
 }
 
 main()

@@ -7,28 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============ USER & AUTH ============
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  name         String?
-  role         String    @default("user") // user, admin
-  isVerified   Boolean   @default(false) @map("is_verified")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  lastLoginAt  DateTime? @map("last_login_at")
-  verificationToken String? @map("verification_token")
-  resetToken        String? @map("reset_token")
-  resetTokenExpires DateTime? @map("reset_token_expires")
-
-  ownedWorkspaces Workspace[]    @relation("WorkspaceOwner")
-  memberships     Membership[]
-  workflows       Workflow[]
-  runs            Run[]
-  integrations    Integration[]
-  refreshTokens   RefreshToken[]
-  auditLogs       AuditLog[]
+  id                String         @id @default(uuid())
+  email             String         @unique
+  passwordHash      String         @map("password_hash")
+  name              String?
+  role              String         @default("user")
+  isVerified        Boolean        @default(false) @map("is_verified")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  lastLoginAt       DateTime?      @map("last_login_at")
+  verificationToken String?        @map("verification_token")
+  resetToken        String?        @map("reset_token")
+  resetTokenExpires DateTime?      @map("reset_token_expires")
+  auditLogs         AuditLog[]
+  integrations      Integration[]
+  memberships       Membership[]
+  refreshTokens     RefreshToken[]
+  runs              Run[]
+  workflows         Workflow[]
+  ownedWorkspaces   Workspace[]    @relation("WorkspaceOwner")
 
   @@map("users")
 }
@@ -39,32 +37,29 @@ model RefreshToken {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
 }
 
-// ============ WORKSPACE (TENANT) ============
 model Workspace {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  ownerId   String   @map("owner_id")
-  planId    String?  @map("plan_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  owner        User          @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  plan         Plan?         @relation(fields: [planId], references: [id])
-  memberships  Membership[]
-  workflows    Workflow[]
-  runs         Run[]
-  integrations Integration[]
-  subscription Subscription?
-  usageRecords UsageRecord[]
+  id           String        @id @default(uuid())
+  name         String
+  slug         String        @unique
+  ownerId      String        @map("owner_id")
+  planId       String?       @map("plan_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
   apiKeys      ApiKey[]
   auditLogs    AuditLog[]
+  integrations Integration[]
+  memberships  Membership[]
+  runs         Run[]
+  subscription Subscription?
+  usageRecords UsageRecord[]
+  workflows    Workflow[]
+  plan         Plan?         @relation(fields: [planId], references: [id])
+  owner        User          @relation("WorkspaceOwner", fields: [ownerId], references: [id])
 
   @@map("workspaces")
 }
@@ -73,41 +68,38 @@ model Membership {
   id          String    @id @default(uuid())
   userId      String    @map("user_id")
   workspaceId String    @map("workspace_id")
-  role        String    @default("member") // owner, admin, member
+  role        String    @default("member")
   invitedBy   String?   @map("invited_by")
   invitedAt   DateTime  @default(now()) @map("invited_at")
   acceptedAt  DateTime? @map("accepted_at")
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
   @@map("memberships")
 }
 
-// ============ WORKFLOWS ============
 model Workflow {
-  id           String   @id @default(uuid())
-  workspaceId  String   @map("workspace_id")
+  id           String            @id @default(uuid())
+  workspaceId  String            @map("workspace_id")
   name         String
   filename     String?
   json         String
-  active       Boolean  @default(false)
-  public       Boolean  @default(false)
+  active       Boolean           @default(false)
+  public       Boolean           @default(false)
   tags         String?
-  nodesCount   Int      @default(0) @map("nodes_count")
+  nodesCount   Int               @default(0) @map("nodes_count")
   integrations String?
   category     String?
-  createdBy    String   @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  popularity   Int      @default(0)
-  usageCount   Int      @default(0) @map("usage_count")
-
-  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  creator   User              @relation(fields: [createdBy], references: [id])
-  runs      Run[]
-  versions  WorkflowVersion[]
+  createdBy    String            @map("created_by")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  popularity   Int               @default(0)
+  usageCount   Int               @default(0) @map("usage_count")
+  runs         Run[]
+  versions     WorkflowVersion[]
+  creator      User              @relation(fields: [createdBy], references: [id])
+  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([active])
@@ -125,34 +117,31 @@ model WorkflowVersion {
   json       String
   note       String?
   createdAt  DateTime @default(now()) @map("created_at")
-
-  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@unique([workflowId, version])
   @@map("workflow_versions")
 }
 
-// ============ RUNS (EXECUTIONS) ============
 model Run {
   id             String    @id @default(uuid())
   workflowId     String    @map("workflow_id")
   workspaceId    String    @map("workspace_id")
   triggeredBy    String?   @map("triggered_by")
-  triggerType    String?   @map("trigger_type") // manual, webhook, schedule
-  status         String    @default("queued") // queued, running, success, failed, cancelled
+  triggerType    String?   @map("trigger_type")
+  status         String    @default("queued")
   startedAt      DateTime? @map("started_at")
   finishedAt     DateTime? @map("finished_at")
   durationMs     Int?      @map("duration_ms")
-  inputData      String?     @map("input_data")
-  outputData     String?     @map("output_data")
+  inputData      String?   @map("input_data")
+  outputData     String?   @map("output_data")
   errorMessage   String?   @map("error_message")
   logs           String?
   nodeExecutions Int       @default(0) @map("node_executions")
   createdAt      DateTime  @default(now()) @map("created_at")
-
-  workflow  Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User?     @relation(fields: [triggeredBy], references: [id])
+  user           User?     @relation(fields: [triggeredBy], references: [id])
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workflow       Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@index([workflowId])
   @@index([workspaceId])
@@ -163,11 +152,10 @@ model Run {
   @@map("runs")
 }
 
-// ============ INTEGRATIONS ============
 model Integration {
   id                   String    @id @default(uuid())
   workspaceId          String    @map("workspace_id")
-  type                 String // slack, gmail, sheets, etc.
+  type                 String
   name                 String?
   encryptedCredentials String    @map("encrypted_credentials")
   metadata             String?
@@ -175,9 +163,8 @@ model Integration {
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
   lastUsedAt           DateTime? @map("last_used_at")
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [connectedBy], references: [id])
+  user                 User      @relation(fields: [connectedBy], references: [id])
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([type])
@@ -185,55 +172,51 @@ model Integration {
   @@map("integrations")
 }
 
-// ============ BILLING ============
 model Plan {
-  id           String   @id @default(uuid())
-  name         String
-  slug         String   @unique
-  priceMonthly Float    @map("price_monthly")
-  priceYearly  Float    @map("price_yearly")
-  runsPerMonth Int      @map("runs_per_month")
-  maxWorkflows Int      @map("max_workflows")
-  maxMembers   Int      @map("max_members")
-  features     String?
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  workspaces    Workspace[]
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  priceMonthly  Float          @map("price_monthly")
+  priceYearly   Float          @map("price_yearly")
+  runsPerMonth  Int            @map("runs_per_month")
+  maxWorkflows  Int            @map("max_workflows")
+  maxMembers    Int            @map("max_members")
+  features      String?
+  createdAt     DateTime       @default(now()) @map("created_at")
   subscriptions Subscription[]
+  workspaces    Workspace[]
 
   @@map("plans")
 }
 
 model Subscription {
-  id                   String   @id @default(uuid())
-  workspaceId          String   @unique @map("workspace_id")
-  planId               String   @map("plan_id")
-  stripeSubscriptionId String?  @map("stripe_subscription_id")
-  stripeCustomerId     String?  @map("stripe_customer_id")
-  status               String // active, cancelled, past_due
-  currentPeriodStart   DateTime @map("current_period_start")
-  currentPeriodEnd     DateTime @map("current_period_end")
-  cancelAtPeriodEnd    Boolean  @default(false) @map("cancel_at_period_end")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  plan      Plan      @relation(fields: [planId], references: [id])
+  id                   String    @id @default(uuid())
+  workspaceId          String    @unique @map("workspace_id")
+  planId               String    @map("plan_id")
+  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  stripeCustomerId     String?   @map("stripe_customer_id")
+  status               String
+  currentPeriodStart   DateTime  @map("current_period_start")
+  currentPeriodEnd     DateTime  @map("current_period_end")
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  plan                 Plan      @relation(fields: [planId], references: [id])
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
 
 model UsageRecord {
-  id             String   @id @default(uuid())
-  workspaceId    String   @map("workspace_id")
-  periodStart    DateTime @map("period_start")
-  periodEnd      DateTime @map("period_end")
-  runsCount      Int      @default(0) @map("runs_count")
-  nodeExecutions Int      @default(0) @map("node_executions")
-  apiCalls       Int      @default(0) @map("api_calls")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id             String    @id @default(uuid())
+  workspaceId    String    @map("workspace_id")
+  periodStart    DateTime  @map("period_start")
+  periodEnd      DateTime  @map("period_end")
+  runsCount      Int       @default(0) @map("runs_count")
+  nodeExecutions Int       @default(0) @map("node_executions")
+  apiCalls       Int       @default(0) @map("api_calls")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, periodStart])
   @@index([workspaceId])
@@ -241,7 +224,6 @@ model UsageRecord {
   @@map("usage_records")
 }
 
-// ============ API KEYS ============
 model ApiKey {
   id          String    @id @default(uuid())
   workspaceId String    @map("workspace_id")
@@ -251,33 +233,39 @@ model ApiKey {
   lastUsedAt  DateTime? @map("last_used_at")
   expiresAt   DateTime? @map("expires_at")
   createdAt   DateTime  @default(now()) @map("created_at")
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([expiresAt])
   @@map("api_keys")
 }
 
-// ============ AUDIT LOGS ============
 model AuditLog {
-  id          String   @id @default(uuid())
-  userId      String?  @map("user_id")
-  workspaceId String?  @map("workspace_id")
-  action      String // login, logout, workspace_create, workflow_execute, billing_change, etc.
-  resource    String? // workspace, workflow, subscription, etc.
-  resourceId  String?  @map("resource_id")
-  details     String? // Additional context
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  id          String     @id @default(uuid())
+  userId      String?    @map("user_id")
+  workspaceId String?    @map("workspace_id")
+  action      String
+  resource    String?
+  resourceId  String?    @map("resource_id")
+  details     String?
+  ipAddress   String?    @map("ip_address")
+  userAgent   String?    @map("user_agent")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  user        User?      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([workspaceId])
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model StripeEvent {
+  id        String   @id
+  type      String
+  status    String   @default("processed")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_events")
 }
