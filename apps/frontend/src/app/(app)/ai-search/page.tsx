@@ -65,13 +65,16 @@ export default function AISearchPage() {
     setIsLoading(true)
     setError('')
     try {
-      // Mock Response
-      await new Promise(r => setTimeout(r, 1500));
-      setResults([
-        { id: 1, filename: 'social-auto', name: 'Social Media Automation', active: true, description: 'Post to Twitter, LinkedIn, and Facebook automatically.', trigger_type: 'scheduled', complexity: 'medium', node_count: 12, integrations: ['Notion', 'Twitter', 'LinkedIn'], tags: ['social'] },
-        { id: 4, filename: 'slack-bot', name: 'Slack Support Bot', active: true, description: 'AI-powered Slack bot to answer common support questions.', trigger_type: 'webhook', complexity: 'high', node_count: 24, integrations: ['Slack', 'OpenAI'], tags: ['support', 'ai'] }
-      ])
-      setExplanation(`Found 2 workflows matching "${query}" using semantic search analysis.`)
+      const response = await fetch(`${BACKEND_URL}/api/ai-search/semantic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      })
+      const data = await response.json()
+      if (data.results) {
+        setResults(data.results)
+        setExplanation(data.explanation || `Found ${data.total} workflows matching "${query}".`)
+      }
     } catch (error) {
       console.error('Search error:', error)
       setError('Failed to search. Please try again.')
@@ -85,18 +88,48 @@ export default function AISearchPage() {
     setIsLoading(true)
     setError('')
     try {
-      // Mock Response
-      await new Promise(r => setTimeout(r, 2500));
-      setResults([
-        { id: 2, filename: 'email-parser', name: 'Email Lead Parser', active: true, description: 'Extract leads from incoming emails and save to CRM.', trigger_type: 'webhook', complexity: 'low', node_count: 5, integrations: ['Gmail', 'HubSpot'], tags: ['sales', 'crm'] },
-      ])
-      setExplanation(`AI analyzed your request: "${description.substring(0, 30)}..." and found 1 relevant automation patterns.`)
-      setAnalysis({ intent: 'lead_generation', concepts: ['email_parsing', 'crm_sync'], triggerType: 'webhook', complexity: 'low' })
+      const response = await fetch(`${BACKEND_URL}/api/ai-search/describe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+      })
+      const data = await response.json()
+      if (data.results) {
+        setResults(data.results)
+        setExplanation(data.explanation || `AI analyzed your request and found ${data.total} relevant automation patterns.`)
+        setAnalysis(data.analysis)
+      }
     } catch (error) {
       console.error('Describe search error:', error)
       setError('Failed to find workflows. Please try again.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleCloneWorkflow = async (workflowId: string) => {
+    try {
+      // In a real app, we'd show a workspace picker. For now, we'll try to clone to the current/default workspace.
+      const response = await fetch(`${BACKEND_URL}/api/saas-workflows/${workflowId}/clone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Assuming auth header is needed if logged in
+        },
+        body: JSON.stringify({
+          targetWorkspaceId: 'current', // Backend needs to handle this or we need to pass a real ID
+          newName: `Copy of ${results.find(r => r.id.toString() === workflowId)?.name}`
+        })
+      })
+      const data = await response.json()
+      if (data.success) {
+        alert('Workflow cloned successfully to your workspace!')
+      } else {
+        alert(`Failed to clone: ${data.message}`)
+      }
+    } catch (error) {
+      console.error('Clone error:', error)
+      alert('Failed to clone workflow.')
     }
   }
 
@@ -244,29 +277,41 @@ export default function AISearchPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {results.map((workflow) => (
-                <div key={workflow.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all group cursor-pointer">
+                <div key={workflow.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all group cursor-pointer flex flex-col h-full">
                   <div className="flex justify-between items-start mb-4">
                     <div className="p-3 bg-[#8b5cf6]/20 rounded-xl text-[#8b5cf6]">
                       <Brain className="w-6 h-6" />
                     </div>
                     <div className={`px-2 py-1 rounded text-xs font-bold border ${workflow.complexity === 'low' ? 'border-green-500/20 text-green-400 bg-green-500/10' : 'border-amber-500/20 text-amber-400 bg-amber-500/10'}`}>
-                      {workflow.complexity.toUpperCase()}
+                      {workflow.complexity?.toUpperCase() || 'MEDIUM'}
                     </div>
                   </div>
                   <h3 className="text-xl font-bold mb-2 group-hover:text-[#8b5cf6] transition-colors">{workflow.name}</h3>
-                  <p className="text-white/60 text-sm mb-4 line-clamp-2">{workflow.description}</p>
+                  <p className="text-white/60 text-sm mb-4 line-clamp-3">{workflow.description}</p>
 
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                    <div className="flex -space-x-2">
-                      {workflow.integrations.map((app, i) => (
-                        <div key={i} className="w-8 h-8 rounded-full bg-[#1e1e2e] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white/60">
-                          {app[0]}
+                  <div className="mt-auto space-y-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {workflow.integrations?.map((app, i) => (
+                        <div key={i} className="px-2 py-1 bg-white/5 rounded-md text-[10px] font-bold text-white/60 border border-white/5">
+                          {app}
                         </div>
                       ))}
                     </div>
-                    <button className="text-sm font-bold text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      View Details <ArrowRight className="w-4 h-4" />
-                    </button>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCloneWorkflow(workflow.id.toString());
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-[#8b5cf6] text-white/70 hover:text-white transition-all font-bold flex items-center gap-1.5"
+                      >
+                        Clone Template
+                      </button>
+                      <button className="text-sm font-bold text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                        Details <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
