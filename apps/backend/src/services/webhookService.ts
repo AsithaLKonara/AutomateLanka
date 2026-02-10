@@ -67,13 +67,13 @@ class WebhookService {
                         workspaceId: workflow.workspaceId,
                         triggerType: 'webhook',
                         status: 'queued',
-                        inputData: {
+                        inputData: JSON.stringify({
                             headers,
                             body,
                             query,
                             webhookPath: path,
                             webhookMethod: method,
-                        },
+                        }),
                     },
                 });
 

@@ -13,7 +13,8 @@ import {
     HelpCircle,
     BarChart3,
     Cloud,
-    Zap
+    Zap,
+    LogOut
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -41,7 +42,7 @@ const SidebarItem = ({ icon, label, href, active }: SidebarItemProps) => (
 export default function Sidebar() {
     const pathname = usePathname();
     const params = useParams();
-    const { user, workspace } = useAuth();
+    const { user, workspace, logout } = useAuth();
     const workspaceId = params.workspaceId as string;
 
     // Use current workspace ID if in a workspace route, otherwise use user's default/first workspace
@@ -110,14 +111,24 @@ export default function Sidebar() {
                     />
                 ))}
 
-                <div className="mt-4 flex items-center gap-3 px-3 py-2 border-t border-white/5 pt-4">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                        {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-4">
+                    <div className="flex items-center gap-3 px-3 py-2 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                            {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-bold text-n8n-text-shade truncate">{user?.name || user?.email || 'User'}</span>
+                            <span className="text-[10px] text-n8n-text-tint truncate">{workspace?.plan?.name || 'Free Plan'}</span>
+                        </div>
                     </div>
-                    <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-bold text-n8n-text-shade truncate">{user?.name || user?.email || 'User'}</span>
-                        <span className="text-[10px] text-n8n-text-tint truncate">{workspace?.plan?.name || 'Free Plan'}</span>
-                    </div>
+                    <button
+                        onClick={() => logout()}
+                        id="logout-button"
+                        className="p-2 text-n8n-text-tint hover:text-n8n-danger hover:bg-n8n-danger-light rounded-md transition-colors"
+                        title="Logout"
+                    >
+                        <LogOut size={18} />
+                    </button>
                 </div>
             </div>
         </aside>

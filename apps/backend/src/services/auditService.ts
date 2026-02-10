@@ -42,7 +42,7 @@ class AuditService {
   /**
    * Log user authentication events
    */
-  async logAuth(action: 'login' | 'logout' | 'register' | 'password_reset', userId: string, ipAddress?: string, userAgent?: string): Promise<void> {
+  async logAuth(action: 'login' | 'logout' | 'register' | 'password_reset' | 'email_verify', userId: string, ipAddress?: string, userAgent?: string): Promise<void> {
     await this.log({
       userId,
       action: `auth:${action}`,
