@@ -63,8 +63,20 @@ export class WorkflowWorker {
         );
 
         // Create executor with initial state if resuming
+        let outputsDataObj: any = {};
+        if (run.outputData) {
+          try {
+            outputsDataObj = typeof run.outputData === 'string'
+              ? JSON.parse(run.outputData)
+              : run.outputData;
+          } catch (e) {
+            console.error('Failed to parse outputData for recovery:', e);
+            outputsDataObj = {};
+          }
+        }
+
         const initialOutputs = new Map<string, any>(
-          Object.entries((run.outputData as any) || {})
+          Object.entries(outputsDataObj || {})
         );
 
         const executor = new WorkflowExecutor(

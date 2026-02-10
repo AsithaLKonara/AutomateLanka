@@ -137,6 +137,7 @@ model Run {
   outputData     String?   @map("output_data")
   errorMessage   String?   @map("error_message")
   logs           String?
+  state          String?
   nodeExecutions Int       @default(0) @map("node_executions")
   createdAt      DateTime  @default(now()) @map("created_at")
   user           User?     @relation(fields: [triggeredBy], references: [id])

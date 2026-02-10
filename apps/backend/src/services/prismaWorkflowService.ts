@@ -301,16 +301,9 @@ export class PrismaWorkflowService {
     }
 
     // Log administrative action
-    await auditService.log({
-      workspaceId: workflow.workspaceId,
-      userId,
-      action: 'workflow.update',
-      entityId: workflowId,
-      entityType: 'workflow',
-      metadata: {
-        name: updated.name,
-        changedFields: Object.keys(input)
-      },
+    await auditService.logWorkflow('update', workflowId, workflow.workspaceId, userId, {
+      name: updated.name,
+      changedFields: Object.keys(input)
     });
 
     return updated;

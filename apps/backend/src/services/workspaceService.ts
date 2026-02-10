@@ -71,6 +71,9 @@ export class WorkspaceService {
       return workspace;
     });
 
+    // Log administrative action
+    await auditService.logWorkspace('create', result.id, input.ownerId, { name: result.name });
+
     return result;
   }
 
@@ -189,6 +192,9 @@ export class WorkspaceService {
         },
       },
     });
+
+    // Log administrative action
+    await auditService.logWorkspace('update', workspaceId, userId, { changedFields: Object.keys(input) });
 
     return workspace;
   }
@@ -343,6 +349,9 @@ export class WorkspaceService {
         },
       },
     });
+
+    // Log administrative action
+    await auditService.logWorkspace('update', workspaceId, userId, { action: 'accept_invitation' });
 
     return updated;
   }
@@ -529,6 +538,12 @@ export class WorkspaceService {
         },
         data: { role: 'admin' },
       });
+    });
+
+    // Log administrative action
+    await auditService.logWorkspace('update', workspaceId, currentOwnerId, {
+      action: 'transfer_ownership',
+      newOwnerId
     });
 
     return { success: true };

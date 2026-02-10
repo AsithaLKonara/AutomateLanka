@@ -57,8 +57,8 @@ router.post('/:workflowId/run', checkRunLimit, async (req: AuthRequest, res: Res
       },
     });
 
-    // Enqueue job
-    await workflowQueue.add({ runId: run.id });
+    // Enqueue job with deduplication (jobId = run.id)
+    await workflowQueue.add({ runId: run.id }, { jobId: run.id });
 
     res.status(201).json({
       success: true,

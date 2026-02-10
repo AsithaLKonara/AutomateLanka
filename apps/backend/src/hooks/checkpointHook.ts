@@ -15,14 +15,26 @@ export class CheckpointHook implements ExecutionHook {
                 select: { outputData: true }
             });
 
-            // Update outputData with new node result
-            const currentOutput = (run?.outputData as any) || {};
+            // Parse current outputData if it's a string
+            let currentOutput: any = {};
+            if (run?.outputData) {
+                try {
+                    currentOutput = typeof run.outputData === 'string'
+                        ? JSON.parse(run.outputData)
+                        : run.outputData;
+                } catch (e) {
+                    currentOutput = {};
+                }
+            }
+
             currentOutput[nodeName] = result;
 
             await prisma.run.update({
                 where: { id: runId },
                 data: {
-                    outputData: currentOutput,
+                    outputData: JSON.stringify(currentOutput),
+                    // Also save to 'state' field for redundancy/future-proofing
+                    state: JSON.stringify(currentOutput),
                 }
             });
 

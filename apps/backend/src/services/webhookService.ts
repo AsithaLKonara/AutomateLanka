@@ -77,10 +77,12 @@ class WebhookService {
                     },
                 });
 
-                // Add to queue
+                // Add to queue with deduplication (jobId = runId)
                 await workflowQueue.add({
                     runId: run.id,
-                    triggerNodeName: nodeName, // Tell executor which node started it
+                    triggerNodeName: nodeName,
+                }, {
+                    jobId: run.id,
                 });
 
                 return { runId: run.id, workflowName: workflow.name };
