@@ -10,9 +10,9 @@
     "services/*"
   ],
   "scripts": {
-    "build:all": "turbo build",
-    "dev": "turbo dev",
-    "dev:all": "turbo dev --parallel",
+    "build:all": "node api.js && turbo build",
+    "dev": "node api.js && turbo dev",
+    "dev:all": "node api.js && turbo dev --parallel",
     "lint": "turbo lint",
     "test": "turbo test",
     "check-types": "turbo type-check",

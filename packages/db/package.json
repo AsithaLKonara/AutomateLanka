@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "prisma generate && tsc",
-    "dev": "prisma generate --watch",
+    "build": "node api.js && prisma generate && tsc",
+    "dev": "node api.js && prisma generate --watch",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
