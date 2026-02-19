@@ -3,6 +3,15 @@
 
 AutomateLanka is a professional, self-hosted automation hub that bridges the gap between intelligent AI discovery and high-fidelity workflow execution. Built with a premium "Glassmorphism" aesthetic, it offers a robust SaaS infrastructure for managing complex business processes at scale.
 
+## 🟢 Status & Live Demo
+
+- **Current Status**: Production-ready frontend deployed to Vercel.
+- **Frontend URL**: [https://autolanka-frontend-app.vercel.app](https://autolanka-frontend-app.vercel.app)
+- **Latest Updates**: 
+  - Fixed SSR hydration issues with Clerk authentication.
+  - Optimized Next.js 15 build for Vercel monorepo environments.
+  - Resolved strict typing issues in workflow canvas components.
+
 ## 🚀 Key Features
 
 ### 🧠 Intelligent Search & Discovery
