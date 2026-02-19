@@ -1,32 +1,38 @@
 'use client'
 
-import { useUser } from '@clerk/nextjs'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@autolanka/ui'
 import { Button } from '@autolanka/ui'
 import { Input } from '@autolanka/ui'
 import { Label } from '@autolanka/ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@autolanka/ui'
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  CreditCard, 
-  Key, 
+import {
+  User,
+  Bell,
+  Shield,
+  CreditCard,
+  Key,
   Globe,
   Save,
   Trash2,
   Plus,
   Edit
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function SettingsPage() {
-  const { user } = useUser()
+  const { user } = useAuth()
+  const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const [profile, setProfile] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.emailAddresses[0]?.emailAddress || '',
+    firstName: user?.name ? user.name.split(' ')[0] : '',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : '',
+    email: user?.email || '',
     company: '',
     phone: '',
     timezone: 'UTC',
@@ -118,6 +124,8 @@ export default function SettingsPage() {
       setIsLoading(false)
     }
   }
+
+  if (!mounted) return null
 
   return (
     <div className="min-h-screen bg-gray-50">

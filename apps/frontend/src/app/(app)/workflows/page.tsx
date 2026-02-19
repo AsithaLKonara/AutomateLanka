@@ -64,7 +64,7 @@ export default function WorkflowsPage() {
       setIsLoading(true)
       const response = await apiClient.get('/api/saas-workflows')
       // The API returns { success: true, data: { workflows: [], total: 0 } }
-      setWorkflows(response.data.data.workflows || [])
+      setWorkflows((response as any).data.data.workflows || [])
     } catch (error) {
       console.error('Failed to load workflows:', error)
     } finally {

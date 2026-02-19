@@ -49,7 +49,7 @@ function WorkflowCanvasInternal({ workflowId, workspaceId }: { workflowId: strin
             try {
                 setIsLoading(true);
                 const response = await apiClient.get(`/api/saas-workflows/${workflowId}`);
-                const data = response.data;
+                const data = (response as any).data;
 
                 if (data && data.json) {
                     const { nodes: loadedNodes = [], edges: loadedEdges = [], viewport } = data.json;

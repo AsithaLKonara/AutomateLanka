@@ -240,3 +240,5 @@ secrets.*
 .env.local
 .env.production
 .env.staging
+.vercel
+.turbo

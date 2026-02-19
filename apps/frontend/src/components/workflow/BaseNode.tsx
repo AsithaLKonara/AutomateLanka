@@ -7,7 +7,7 @@ import * as LucideIcons from 'lucide-react';
 import { WorkflowNodeData } from './types';
 import { NODE_CATEGORIES } from './constants';
 
-const BaseNode = ({ data, selected }: NodeProps<WorkflowNodeData>) => {
+const BaseNode = ({ data, selected }: any) => {
     const category = NODE_CATEGORIES.find(c => c.id === data.type);
     const Icon = (LucideIcons as any)[data.icon || 'help-circle'] || LucideIcons.HelpCircle;
 
@@ -49,8 +49,8 @@ const BaseNode = ({ data, selected }: NodeProps<WorkflowNodeData>) => {
                 {/* Status Dot */}
                 {data.status && (
                     <div className={`w-2 h-2 rounded-full ${data.status === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' :
-                            data.status === 'error' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                                data.status === 'running' ? 'bg-blue-500 animate-pulse' : 'bg-white/20'
+                        data.status === 'error' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                            data.status === 'running' ? 'bg-blue-500 animate-pulse' : 'bg-white/20'
                         }`} />
                 )}
             </div>

@@ -1,18 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd apps/frontend && npm install && npm run build",
+  "buildCommand": "pnpm --filter @autolanka/frontend build",
+  "installCommand": "pnpm install",
   "outputDirectory": "apps/frontend/.next",
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./apps/frontend",
-  "regions": ["iad1"],
-  "env": {
-    "NEXT_PUBLIC_BACKEND_URL": "@backend_url"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_BACKEND_URL": "@backend_url"
-    }
-  }
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./apps/frontend"
 }
-
